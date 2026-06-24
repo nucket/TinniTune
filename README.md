@@ -97,6 +97,7 @@ Dado que la aplicación realiza operaciones de carga de buffers de audio y visua
 *   **`index.html`**: Estructura semántica, paneles interactivos, SVGs y el lienzo del Canvas.
 *   **`style.css`**: Sistema de diseño basado en CSS Vanilla con variables personalizadas, efectos de cristal translúcido (glassmorphism) y diseño responsivo.
 *   **`app.js`**: Lógica de inicialización del Web Audio API, bucle del visualizador con `requestAnimationFrame` y controladores del DOM.
+*   **`CHANGELOG.md`**: Registro histórico de cambios y versiones del proyecto.
 *   **`Docs/`**: Directorio de documentación extendida. Contiene [ideas_desarrollo_futuro.md](file:///n:/Person/Project/024-Tinning/Test001/Docs/ideas_desarrollo_futuro.md) con las propuestas de mejora auditiva (Audiogramas, trackers de síntomas, enmascaramiento intermitente, etc.).
 
 ---
