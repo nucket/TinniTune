@@ -6,7 +6,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
-## [1.2.0] - 2026-06-24
+## [0.3.0] - 2026-06-24
 
 ### Añadido
 *   **Temporizador de Apagado (Sleep Timer)**: Botones interactivos para programar el fin de la sesión (15, 30, 45 o 60 minutos) con un indicador en tiempo real (`MM:SS`) del tiempo restante.
@@ -20,7 +20,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
-## [1.1.0] - 2026-06-24
+## [0.2.0] - 2026-06-24
 
 ### Añadido
 *   **Gestor de Presets en Sesión**: Módulo de guardado y carga de configuraciones mediante persistencia local en el navegador (`localStorage`).
@@ -30,7 +30,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
-## [1.0.0] - 2026-06-24
+## [0.1.0] - 2026-06-24
 
 ### Añadido
 *   **Lanzamiento Inicial**: Estructura base de la aplicación de terapia de sonido **Tinnitune** en HTML5, CSS3 y JavaScript nativo.
