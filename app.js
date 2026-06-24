@@ -442,7 +442,7 @@ function updateSynthesizerParams() {
     // Update Notch filter target if active
     if (therapyNotchFilter) {
         therapyNotchFilter.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        notchFreqBadge.textContent = `Corte: ${Math.round(freq)} Hz`;
+        notchFreqBadge.textContent = `Cut: ${Math.round(freq)} Hz`;
     }
 }
 
@@ -610,13 +610,13 @@ function updateNotchFilterState() {
 
     if (isNotchActive) {
         therapyNotchFilter.type = 'notch';
-        notchStatusBadge.textContent = 'Filtro Activo';
+        notchStatusBadge.textContent = 'Filter Active';
         notchStatusBadge.classList.add('active');
         notchFreqBadge.classList.add('active');
-        notchFreqBadge.textContent = `Corte: ${Math.round(getCombinedFrequency())} Hz`;
+        notchFreqBadge.textContent = `Cut: ${Math.round(getCombinedFrequency())} Hz`;
     } else {
         therapyNotchFilter.type = 'allpass'; // Bypass
-        notchStatusBadge.textContent = 'Filtro Inactivo';
+        notchStatusBadge.textContent = 'Filter Inactive';
         notchStatusBadge.classList.remove('active');
         notchFreqBadge.classList.remove('active');
     }
@@ -656,7 +656,7 @@ function startResidualInhibition() {
 
     ensureAudioCtx().then(() => {
         isRiRunning = true;
-        btnStartRI.textContent = 'Detener Terapia RI';
+        btnStartRI.textContent = 'Stop RI Therapy';
         btnStartRI.classList.add('active');
 
         // Turn off soundscapes/maskers during testing to focus on tone
@@ -683,7 +683,7 @@ function startResidualInhibition() {
             if (riTimeRemaining <= 0) {
                 // Done!
                 stopResidualInhibition(true);
-                alert('Sesión de Inhibición Residual completada.\n\nPresta atención a tu oído izquierdo: ¿se ha silenciado o disminuido el zumbido? (Normalmente puede durar de 30s a 2m).');
+                alert('Residual Inhibition session completed.\n\nPay attention to your ears: has the ringing silenced or decreased? (This effect usually lasts between 30s and 2m).');
             }
         }, 1000);
     });
@@ -695,7 +695,7 @@ function stopResidualInhibition(finished = false) {
     clearInterval(riTimerInterval);
     riTimerInterval = null;
     isRiRunning = false;
-    btnStartRI.textContent = 'Iniciar Terapia RI';
+    btnStartRI.textContent = 'Start RI Therapy';
     btnStartRI.classList.remove('active');
 
     // Reset progress circle
@@ -801,14 +801,14 @@ function updatePhaseAngle(angle) {
         btnPhaseNormal.classList.remove('active');
         btnPhaseInverted.classList.add('active');
         waveInvertedDiv.style.animationDirection = 'reverse';
-        waveRelationText.textContent = 'Las ondas colisionan en contra-fase (Interferencia Destructiva)';
+        waveRelationText.textContent = 'Waves collide out of phase (Destructive Interference)';
         waveRelationText.style.color = 'var(--color-cyan)';
         
         phaseEduText.innerHTML = `
-            <strong>En Desfase (180°):</strong> La onda derecha está completamente invertida. Si usas 
-            <strong>altavoces externos</strong>, notarás cómo el sonido disminuye considerablemente al alejarte o inclinarte, 
-            ya que las vibraciones de aire físico se anulan. Si usas <strong>auriculares</strong>, no hay mezcla en el aire, 
-            por lo que percibirás un efecto de vacío espacial. Al ser tu tinnitus subjetivo (neuronal), no colisionará con él.
+            <strong>Out of Phase (180°):</strong> The right wave is completely inverted. If you use 
+            <strong>external speakers</strong>, you will notice the sound level drops significantly as you move or tilt, 
+            since physical air vibrations cancel out. If you use <strong>headphones</strong>, there is no mixing in the air, 
+            so you will perceive a spatial vacuum effect. Since your tinnitus is subjective (neurological), it will not cancel it.
         `;
 
         // Update active audio node directly
@@ -820,13 +820,13 @@ function updatePhaseAngle(angle) {
         btnPhaseNormal.classList.add('active');
         btnPhaseInverted.classList.remove('active');
         waveInvertedDiv.style.animationDirection = 'normal';
-        waveRelationText.textContent = 'Las ondas se suman (Interferencia Constructiva)';
+        waveRelationText.textContent = 'Waves sum up (Constructive Interference)';
         waveRelationText.style.color = 'var(--color-text-muted)';
         
         phaseEduText.innerHTML = `
-            <strong>En Fase (0°):</strong> Ambos altavoces vibran coordinadamente en la misma dirección. 
-            Las ondas se suman acústicamente, duplicando la presión del aire física en el canal auditivo. 
-            El sonido se percibirá centrado y nítido, justo a medio camino entre ambos oídos.
+            <strong>In Phase (0°):</strong> Both speakers vibrate coordinately in the same direction. 
+            The waves sum up acoustically, doubling the physical air pressure in the ear canal. 
+            The sound will be perceived as centered and clear, right midway between both ears.
         `;
 
         // Update active audio node directly
@@ -1005,11 +1005,11 @@ tinnitusBalanceSlider.addEventListener('input', (e) => {
     const val = parseFloat(e.target.value);
     
     // Text output
-    if (val === -1) tinnitusBalanceVal.textContent = 'Solo Oído Izquierdo';
-    else if (val === 1) tinnitusBalanceVal.textContent = 'Solo Oído Derecho';
-    else if (val === 0) tinnitusBalanceVal.textContent = 'Centrado';
-    else if (val < 0) tinnitusBalanceVal.textContent = `Izquierda (${Math.round(Math.abs(val)*100)}%)`;
-    else tinnitusBalanceVal.textContent = `Derecha (${Math.round(val*100)}%)`;
+    if (val === -1) tinnitusBalanceVal.textContent = 'Left Ear Only';
+    else if (val === 1) tinnitusBalanceVal.textContent = 'Right Ear Only';
+    else if (val === 0) tinnitusBalanceVal.textContent = 'Center';
+    else if (val < 0) tinnitusBalanceVal.textContent = `Left (${Math.round(Math.abs(val)*100)}%)`;
+    else tinnitusBalanceVal.textContent = `Right (${Math.round(val*100)}%)`;
 
     if (isTinnitusPlaying && tinnitusPanner) {
         if (tinnitusPanner.pan) {
@@ -1169,7 +1169,7 @@ function renderPresets() {
     const presets = getPresets();
 
     if (presets.length === 0) {
-        presetsListContainer.innerHTML = '<span class="no-presets">No hay ajustes guardados</span>';
+        presetsListContainer.innerHTML = '<span class="no-presets">No saved settings</span>';
         return;
     }
 
@@ -1183,10 +1183,10 @@ function renderPresets() {
         const freqText = freq >= 1000 ? (freq / 1000).toFixed(2) + ' kHz' : freq + ' Hz';
 
         // Wave type translation
-        let waveTypeText = 'Tono';
-        if (preset.waveType === 'narrowband') waveTypeText = 'Banda Estrecha';
-        else if (preset.waveType === 'white') waveTypeText = 'R. Blanco';
-        else if (preset.waveType === 'pink') waveTypeText = 'R. Rosa';
+        let waveTypeText = 'Tone';
+        if (preset.waveType === 'narrowband') waveTypeText = 'Narrowband';
+        else if (preset.waveType === 'white') waveTypeText = 'White Noise';
+        else if (preset.waveType === 'pink') waveTypeText = 'Pink Noise';
 
         item.innerHTML = `
             <div class="preset-info">
@@ -1231,7 +1231,7 @@ function escapeHtml(str) {
 function saveCurrentPreset() {
     const name = presetNameInput.value.trim();
     if (!name) {
-        alert('Por favor, ingresa un nombre para el ajuste.');
+        alert('Please enter a name for the preset.');
         return;
     }
 
@@ -1305,11 +1305,11 @@ function loadPreset(id) {
     modDepthVal.textContent = preset.modDepth + '%';
     
     const balVal = parseFloat(preset.balance);
-    if (balVal === -1) tinnitusBalanceVal.textContent = 'Solo Oído Izquierdo';
-    else if (balVal === 1) tinnitusBalanceVal.textContent = 'Solo Oído Derecho';
-    else if (balVal === 0) tinnitusBalanceVal.textContent = 'Centrado';
-    else if (balVal < 0) tinnitusBalanceVal.textContent = `Izquierda (${Math.round(Math.abs(balVal)*100)}%)`;
-    else tinnitusBalanceVal.textContent = `Derecha (${Math.round(balVal*100)}%)`;
+    if (balVal === -1) tinnitusBalanceVal.textContent = 'Left Ear Only';
+    else if (balVal === 1) tinnitusBalanceVal.textContent = 'Right Ear Only';
+    else if (balVal === 0) tinnitusBalanceVal.textContent = 'Center';
+    else if (balVal < 0) tinnitusBalanceVal.textContent = `Left (${Math.round(Math.abs(balVal)*100)}%)`;
+    else tinnitusBalanceVal.textContent = `Right (${Math.round(balVal*100)}%)`;
     
     tinnitusVolumeVal.textContent = Math.round(preset.volume * 100) + '%';
     volRainVal.textContent = Math.round(preset.volRain * 100) + '%';
@@ -1508,7 +1508,7 @@ function stopSleepTimerLogic(finished = false) {
     }
     
     isFadingOut = false;
-    document.getElementById('sleepTimerDisplay').textContent = 'Desactivado';
+    document.getElementById('sleepTimerDisplay').textContent = 'Disabled';
     
     sleepButtons.forEach(btn => btn.classList.remove('active'));
     document.getElementById('btnSleepOff').classList.add('active');
@@ -1519,7 +1519,7 @@ function updateSleepTimerUI(minutes) {
     
     if (minutes === 0) {
         document.getElementById('btnSleepOff').classList.add('active');
-        document.getElementById('sleepTimerDisplay').textContent = 'Desactivado';
+        document.getElementById('sleepTimerDisplay').textContent = 'Disabled';
     } else {
         const activeBtn = Array.from(sleepButtons).find(btn => parseInt(btn.getAttribute('data-minutes')) === minutes);
         if (activeBtn) activeBtn.classList.add('active');

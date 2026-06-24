@@ -1,71 +1,71 @@
-# Tinnitune — Sintetizador y Terapia de Tinnitus
+# Tinnitune — Tinnitus Synthesizer & Acoustic Therapy
 
-Tinnitune es una herramienta interactiva basada en web diseñada para la experimentación acústica, sintonización de frecuencias de tinnitus y terapia de enmascaramiento personalizado. Desarrollada de manera nativa utilizando **HTML5, CSS3, JavaScript Vanilla y la Web Audio API**, ofrece una experiencia de sonido fluida sin dependencias externas y con una interfaz de diseño premium y moderno.
-
----
-
-## 🚀 Características Principales
-
-### 1. Sintonizador de Tinnitus (Tinnitus Tuner)
-*   **Modo de Onda Seleccionable**: Tono puro (senoidal), ruido filtrado de banda estrecha (que simula silbidos agudos) y ruidos de banda ancha (rosa o blanco).
-*   **Ajuste de Frecuencia Preciso**: Control logarítmico grueso de frecuencia (20 Hz - 16 kHz) acoplado con sintonía fina paso a paso (±100 Hz).
-*   **Modulación de Trémolo**: Simulación de zumbido pulsante mediante un oscilador de baja frecuencia (LFO) con parámetros ajustables de velocidad y profundidad.
-*   **Balance Estéreo y Volumen**: Permite configurar de qué lado (o en qué proporción) se percibe el zumbido de forma independiente.
-
-### 2. Mezclador de Enmascaramiento y Ruido Clínico
-*   **Filtro Notch (Muesca) Terapéutico**: Al activarse, elimina automáticamente una banda estrecha alrededor de la frecuencia identificada de tu tinnitus de todas las fuentes de enmascaramiento ambiental. Esto estimula la plasticidad neural al dar descanso a los receptores auditivos fatigados.
-*   **Sonidos Ambientales Sintetizados**: Olas de océano (moduladas por LFO), lluvia suave (ruido marrón y altas frecuencias) y viento del bosque (filtros paso banda aleatorios).
-*   **Generación de Ruidos Clínicos**: Acceso instantáneo a buffers locales de Ruido Blanco, Ruido Rosa y Ruido Marrón.
-
-### 3. Inhibición Residual (RI)
-*   Un temporizador visual (30s, 60s, 120s) con retroalimentación circular que reproduce el sonido idéntico de tu tinnitus a un volumen similar para probar la inhibición residual (silenciamiento temporal o disminución del zumbido que ocurre en el cerebro después del estímulo).
-
-### 4. Experimento de Desfase de Onda (Fase Física)
-*   Demuestra la interferencia constructiva (0° en fase) y destructiva (180° en contrafase). Permite experimentar cómo las ondas colisionan en el aire físico anulándose mutuamente si se usan altavoces estéreo externos.
-
-### 5. Gestor de Ajustes Personalizados (Presets)
-*   Almacena configuraciones específicas en la sesión del navegador (`localStorage`). Guarda el tipo de zumbido, volumen, balance, sonidos de fondo mezclados y el estado del filtro Notch para cargarlos o borrarlos de manera inmediata.
-
-### 6. Temporizador de Apagado (Sleep Timer) con Desvanecimiento Gradual
-*   Permite seleccionar una duración (15, 30, 45 o 60 minutos) para reproducir los sonidos de fondo.
-*   **Desvanecimiento (Fade Out) Suave**: Durante los últimos 60 segundos del temporizador, el volumen desciende de manera progresiva para evitar cambios bruscos que despierten al usuario, restableciendo la ganancia de forma segura al finalizar.
+Tinnitune is an interactive web-based tool designed for sound exploration, tinnitus frequency mapping, and custom masking sound therapy. Built natively using **HTML5, CSS3, Vanilla JavaScript, and the Web Audio API**, it delivers a seamless, zero-dependency audio experience with a premium, glassmorphic dark mode user interface.
 
 ---
 
-## 🛠️ Arquitectura de Audio y Enrutamiento
+## 🚀 Key Features
 
-Tinnitune aprovecha la potencia de la **Web Audio API** para procesar audio en tiempo de ejecución. El siguiente diagrama representa el flujo de señal y conexiones de los nodos de audio creados:
+### 1. Tinnitus Tuner
+*   **Selectable Waveform**: Pure Tone (sine wave), narrowband noise (resembling a sharp whistle), and broadband noise (pink or white noise).
+*   **Precise Frequency Control**: Logarithmic coarse slider (20 Hz - 16 kHz) combined with fine tuning adjustments (±100 Hz).
+*   **Tremolo Modulation**: Pulsating zumbido simulation via a Low Frequency Oscillator (LFO) with adjustable rate and depth.
+*   **Stereo Balance & Volume**: Independent controls to shift the sound location or adjust the generator's volume.
+
+### 2. Masking Mixer & Clinical Noise
+*   **Therapeutic Notch Filter**: When enabled, it dynamically cuts out a narrow band around your matched tinnitus frequency from all background soundscapes. This promotes neural retraining by giving fatigued auditory receptors a rest.
+*   **Synthesized Soundscapes**: Ocean waves (lowpass pink noise modulated by LFO), gentle rain (brown noise with high-pass droplets), and forest wind (slow LFO modulating a bandpass filter).
+*   **Clinical Noise Generators**: Playback of dynamically generated White, Pink, and Brown noise.
+
+### 3. Residual Inhibition (RI)
+*   A circular visual timer (30s, 60s, 120s) that plays your matched tinnitus frequency at a similar volume level to test residual inhibition (the temporary reduction or elimination of tinnitus perception that occurs after auditory stimulation).
+
+### 4. Wave Phase Experiment (Physical ANC)
+*   Demonstrates constructive (0° in phase) and destructive (180° out of phase) wave interference. Learn how sound waves collide in physical space and cancel each other out when using external stereo speakers.
+
+### 5. Preset Manager (Saved Settings)
+*   Saves your current configurations (waveform type, frequencies, LFO rates, ambient volumes, and Notch Filter status) locally in the browser (`localStorage`) for quick one-click load or deletion.
+
+### 6. Sleep Timer with Smooth Fade Out
+*   Set a sleep timer (15, 30, 45, or 60 minutes) to play therapy soundscapes as you sleep.
+*   **Gentle Fade Out**: During the last 60 seconds of the timer, the master volume declines exponentially to 0 to prevent waking the user up, resetting safely to your initial volume level afterward.
+
+---
+
+## 🛠️ Audio Architecture & Routing
+
+Tinnitune leverages the power of the **Web Audio API** to process audio in real-time. The following diagram illustrates the routing path and connections of the audio nodes:
 
 ```mermaid
 graph TD
-    %% Nodos de Entrada del Sintetizador
-    subgraph Sintetizador
-        A[Generador de Tinnitus<br>Oscilador o Ruido Filtrado] --> B[Ganancia de Modulación<br>LFO Trémolo]
-        B --> C[Volumen del Generador]
-        C --> D[Panner Estéreo]
+    %% Synthesizer Input Nodes
+    subgraph Synthesizer
+        A[Tinnitus Generator<br>Oscillator or Filtered Noise] --> B[Modulation Gain<br>LFO Tremolo]
+        B --> C[Generator Volume]
+        C --> D[Stereo Panner]
     end
 
-    %% Nodos de Terapia y Enmascaramiento
-    subgraph Terapia & Enmascaramiento
-        E[Soundscapes Sintetizados<br>Lluvia, Olas, Viento] --> H[Filtro Notch Terapéutico<br>Muesca en Freq Tinnitus]
-        F[Ruido Clínico<br>Blanco, Rosa, Marrón] --> H
+    %% Therapy & Masking Nodes
+    subgraph Therapy & Masking
+        E[Synthesized Soundscapes<br>Rain, Waves, Wind] --> H[Therapeutic Notch Filter<br>Cut at Tinnitus Freq]
+        F[Clinical Noise<br>White, Pink, Brown] --> H
     end
 
-    %% Experimento de Desfase
-    subgraph Experimento de Fase
-        I[Oscilador de Fase] --> J[Ganancia Canal Izquierdo]
-        I --> K[Ganancia Canal Derecho<br>Inversión a -1.0 en 180°]
-        J --> L[Merger Estéreo]
+    %% Phase Experiment Nodes
+    subgraph Phase Experiment
+        I[Phase Oscillator] --> J[Left Channel Gain]
+        I --> K[Right Channel Gain<br>Inversion to -1.0 at 180°]
+        J --> L[Stereo Merger]
         K --> L
     end
 
-    %% Conexiones al Analizador y Destino
-    D --> M[Analizador de Espectro<br>FFT Canvas]
+    %% Analyzer & Destination Connections
+    D --> M[Spectrum Analyser<br>FFT Canvas]
     H --> M
     L --> M
     
-    M --> N[Ganancia Maestra<br>Volumen General]
-    N --> O[Audio Destination<br>Altavoces / Auriculares]
+    M --> N[Master Gain<br>General Volume]
+    N --> O[Audio Destination<br>Speakers / Headphones]
 
     style H fill:#06c6e3,stroke:#fff,stroke-width:2px,color:#000
     style M fill:#a21cf3,stroke:#fff,stroke-width:2px,color:#fff
@@ -73,35 +73,35 @@ graph TD
 
 ---
 
-## 🖥️ Ejecución Local
+## 🖥️ Local Execution
 
-Dado que la aplicación realiza operaciones de carga de buffers de audio y visualización de espectro, los navegadores restringen algunas características bajo el protocolo de archivos locales (`file://`). Se recomienda levantar un servidor local rápido:
+Browsers restrict some Web Audio features and buffer loads when running directly from local files (`file://`). Running a lightweight local HTTP server is recommended:
 
-### Método 1: Usando Node.js (npx)
-1. Instala e inicia un servidor ligero:
+### Method 1: Using Node.js (npx)
+1. Launch the server from your project folder:
    ```bash
    npx http-server
    ```
-2. Abre la URL en el navegador (ej. `http://localhost:8080`).
+2. Open the URL shown in your console (usually `http://localhost:8080`).
 
-### Método 2: Usando Python
-1. Levanta el servidor desde la terminal en el directorio del proyecto:
+### Method 2: Using Python
+1. Start the HTTP server from the command line:
    ```bash
    python -m http.server 8000
    ```
-2. Accede a `http://localhost:8000`.
+2. Open `http://localhost:8000` in your web browser.
 
 ---
 
-## 📄 Archivos del Proyecto
-*   **`index.html`**: Estructura semántica, paneles interactivos, SVGs y el lienzo del Canvas.
-*   **`style.css`**: Sistema de diseño basado en CSS Vanilla con variables personalizadas, efectos de cristal translúcido (glassmorphism) y diseño responsivo.
-*   **`app.js`**: Lógica de inicialización del Web Audio API, bucle del visualizador con `requestAnimationFrame` y controladores del DOM.
-*   **`CHANGELOG.md`**: Registro histórico de cambios y versiones del proyecto.
-*   **`Docs/`**: Directorio de documentación extendida. Contiene [ideas_desarrollo_futuro.md](file:///n:/Person/Project/024-Tinning/Test001/Docs/ideas_desarrollo_futuro.md) con las propuestas de mejora auditiva (Audiogramas, trackers de síntomas, enmascaramiento intermitente, etc.).
+## 📄 Project Files
+*   **`index.html`**: Semantic page structure, SVG icons, visualizer canvas, and panels.
+*   **`style.css`**: Vanilla CSS styling featuring CSS variables, glassmorphic elements, and a responsive grid.
+*   **`app.js`**: Main JS file handling Web Audio nodes, canvas render loop (`requestAnimationFrame`), and DOM event listeners.
+*   **`CHANGELOG.md`**: Chronological log of versions and features added.
+*   **`Docs/`**: Directory for extended documentation. Contains [future_development_ideas.md](file:///n:/Person/Project/024-Tinning/Test001/Docs/future_development_ideas.md) detailing clinical sound therapy expansion concepts (audiograms, symptom trackers, pulsed masking, etc.).
 
 ---
 
-## ⚠️ Descargo de Responsabilidad Médica
+## ⚠️ Medical Disclaimer
 
-Esta aplicación es una herramienta didáctica e interactiva de apoyo acústico. No es un dispositivo médico, no proporciona diagnósticos clínicos y no reemplaza la opinión o tratamiento de un otorrinolaringólogo u audiólogo profesional. Evita escuchar sonidos a volúmenes excesivos para prevenir daños auditivos.
+This application is an educational sound exploration and therapeutic support tool. It is not a medical device, does not provide diagnostics, and does not replace the advice, diagnosis, or treatment of a health professional or audiologist. Use headphones at safe volumes to avoid further hearing damage.

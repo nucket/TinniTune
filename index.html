@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tinnitune — Sintetizador y Terapia de Tinnitus</title>
-    <meta name="description" content="Una herramienta interactiva para mapear el tinnitus, enmascarar ruido, terapia de sonido notched y probar inhibición residual.">
+    <title>Tinnitune — Tinnitus Synthesizer & Acoustic Therapy</title>
+    <meta name="description" content="An interactive tool to map tinnitus, mask noise, play notched sound therapy, and test residual inhibition.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,21 +31,21 @@
                 </div>
                 <div class="brand-text">
                     <h1>Tinnitune</h1>
-                    <p>Sintetizador y Terapia Acústica para Tinnitus</p>
+                    <p>Tinnitus Synthesizer & Acoustic Therapy</p>
                 </div>
             </div>
 
             <div class="header-controls">
                 <div class="audio-status" id="audioStatus">
                     <span class="status-dot"></span>
-                    <span class="status-text">Audio Desconectado</span>
+                    <span class="status-text">Audio Disconnected</span>
                 </div>
                 <button id="btnStartAudio" class="btn-primary btn-glow">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
-                    Iniciar Motor de Audio
+                    Start Audio Engine
                 </button>
                 <div class="master-volume">
-                    <span class="volume-label">Volumen General</span>
+                    <span class="volume-label">Master Volume</span>
                     <div class="volume-slider-container">
                         <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
                         <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.5" class="slider-neon">
@@ -58,43 +58,43 @@
         <!-- VISUALIZER CARD (Top/Center) -->
         <section class="panel visualizer-panel">
             <div class="visualizer-header">
-                <h3>Visualizador de Espectro en Tiempo Real</h3>
-                <span class="visualizer-sub">Representación de la salida combinada de audio hacia tus oídos</span>
+                <h3>Real-Time Spectrum Visualizer</h3>
+                <span class="visualizer-sub">Visualization of the combined audio output to your ears</span>
             </div>
             <div class="canvas-container">
                 <canvas id="visualizerCanvas"></canvas>
             </div>
         </section>
 
-        <!-- GRID PRINCIPAL -->
+        <!-- MAIN GRID -->
         <main class="dashboard-grid">
             
-            <!-- PANEL 1: MATCHING (SINTETIZADOR) -->
+            <!-- PANEL 1: MATCHING (SYNTHESIZER) -->
             <section class="panel glass-panel" id="panelSynthesizer">
                 <div class="panel-header">
                     <div class="panel-icon icon-purple">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5v14M22 9v6M7 8v8M2 10v4"/></svg>
                     </div>
-                    <h2>1. Sintonizador de Tinnitus</h2>
+                    <h2>1. Tinnitus Tuner</h2>
                 </div>
                 
-                <p class="panel-desc">Ajusta los controles hasta que el sonido generado se asemeje lo más posible a tu zumbido interno.</p>
+                <p class="panel-desc">Adjust the controls until the generated sound closely matches your internal ringing.</p>
 
-                <!-- Tipo de Sonido Base -->
+                <!-- Base Sound Type -->
                 <div class="control-group">
-                    <label class="group-title">Tipo de Sonido Base</label>
+                    <label class="group-title">Base Sound Type</label>
                     <div class="btn-grid" id="waveTypeGrid">
-                        <button class="btn-select active" data-type="sine">Tono Puro<small>Senoidal</small></button>
-                        <button class="btn-select" data-type="narrowband">Banda Estrecha<small>Ruido Filtrado</small></button>
-                        <button class="btn-select" data-type="white">Ruido Blanco<small>Espectro Plano</small></button>
-                        <button class="btn-select" data-type="pink">Ruido Rosa<small>Bajos Naturales</small></button>
+                        <button class="btn-select active" data-type="sine">Pure Tone<small>Sine Wave</small></button>
+                        <button class="btn-select" data-type="narrowband">Narrowband<small>Filtered Noise</small></button>
+                        <button class="btn-select" data-type="white">White Noise<small>Flat Spectrum</small></button>
+                        <button class="btn-select" data-type="pink">Pink Noise<small>Natural Bass</small></button>
                     </div>
                 </div>
 
-                <!-- Frecuencia -->
+                <!-- Frequency -->
                 <div class="control-group">
                     <div class="control-header">
-                        <label for="freqCoarse">Frecuencia Central</label>
+                        <label for="freqCoarse">Center Frequency</label>
                         <span class="control-value" id="freqVal">4000 Hz</span>
                     </div>
                     <div class="range-wrapper">
@@ -102,9 +102,9 @@
                         <input type="range" id="freqCoarse" min="20" max="16000" step="1" value="4000" class="slider-neon accent-purple">
                         <span class="range-limit">16 kHz</span>
                     </div>
-                    <!-- Sintonía Fina -->
+                    <!-- Fine Tuning -->
                     <div class="control-header sub-header">
-                        <label for="freqFine">Sintonía Fina</label>
+                        <label for="freqFine">Fine Tuning</label>
                         <span class="control-value" id="freqFineVal">±0 Hz</span>
                     </div>
                     <div class="range-wrapper">
@@ -114,10 +114,10 @@
                     </div>
                 </div>
 
-                <!-- Modulación / Pulsación -->
+                <!-- Pulse Modulation (Tremolo) -->
                 <div class="control-group expandable">
                     <div class="expand-header">
-                        <label class="group-title">Modulación de Pulsación (Trémolo)</label>
+                        <label class="group-title">Pulse Modulation (Tremolo)</label>
                         <label class="switch">
                             <input type="checkbox" id="modToggle">
                             <span class="slider-round"></span>
@@ -125,24 +125,24 @@
                     </div>
                     <div class="expand-content" id="modControls">
                         <div class="control-header sub-header">
-                            <label for="modRate">Velocidad (Frecuencia de oscilación)</label>
+                            <label for="modRate">Rate (Oscillation frequency)</label>
                             <span class="control-value" id="modRateVal">4.0 Hz</span>
                         </div>
                         <input type="range" id="modRate" min="0.5" max="20" step="0.1" value="4" class="slider-neon">
 
                         <div class="control-header sub-header">
-                            <label for="modDepth">Profundidad (Severidad de pulsión)</label>
+                            <label for="modDepth">Depth (Severity of pulsation)</label>
                             <span class="control-value" id="modDepthVal">40%</span>
                         </div>
                         <input type="range" id="modDepth" min="0" max="100" step="1" value="40" class="slider-neon">
                     </div>
                 </div>
 
-                <!-- Balance y Volumen del Sintetizador -->
+                <!-- Balance and Volume -->
                 <div class="control-group">
                     <div class="control-header">
-                        <label for="tinnitusBalance">Balance Estéreo</label>
-                        <span class="control-value" id="tinnitusBalanceVal">Solo Oído Izquierdo</span>
+                        <label for="tinnitusBalance">Stereo Balance</label>
+                        <span class="control-value" id="tinnitusBalanceVal">Left Ear Only</span>
                     </div>
                     <div class="range-wrapper">
                         <span class="side-label">L</span>
@@ -151,58 +151,58 @@
                     </div>
 
                     <div class="control-header">
-                        <label for="tinnitusVolume">Volumen del Generador</label>
+                        <label for="tinnitusVolume">Generator Volume</label>
                         <span class="control-value" id="tinnitusVolumeVal">30%</span>
                     </div>
                     <input type="range" id="tinnitusVolume" min="0" max="1" step="0.01" value="0.3" class="slider-neon accent-purple">
                 </div>
 
-                <!-- Presets (Ajustes Guardados) -->
+                <!-- Presets (Saved Settings) -->
                 <div class="divider"></div>
                 <div class="control-group">
-                    <label class="group-title">Ajustes Guardados (Presets)</label>
+                    <label class="group-title">Saved Settings (Presets)</label>
                     <div class="preset-manager">
                         <div class="preset-input-group">
-                            <input type="text" id="presetName" placeholder="Ej. Tono agudo con lluvia" class="input-neon">
+                            <input type="text" id="presetName" placeholder="e.g., High-pitch with rain" class="input-neon">
                             <button id="btnSavePreset" class="btn-primary-sm">
                                 <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                                     <polyline points="17 21 17 13 7 13 7 21"></polyline>
                                     <polyline points="7 3 7 8 15 8"></polyline>
                                 </svg>
-                                Guardar
+                                Save
                             </button>
                         </div>
                         <div class="presets-list" id="presetsList">
-                            <span class="no-presets">No hay ajustes guardados</span>
+                            <span class="no-presets">No saved settings</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Play/Pause Individual del Sintetizador -->
+                <!-- Play/Pause Button -->
                 <button id="btnPlaySynthesizer" class="btn-secondary btn-full">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
-                    Escuchar Sintonizador
+                    Listen to Tuner
                 </button>
             </section>
 
-            <!-- PANEL 2: ENMASCARAMIENTO Y SONIDOS AMBIENTALES -->
+            <!-- PANEL 2: THERAPY AND MASKING -->
             <section class="panel glass-panel" id="panelTherapy">
                 <div class="panel-header">
                     <div class="panel-icon icon-cyan">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M17 8v8M22 11v2M7 6v12M2 10v4"/></svg>
                     </div>
-                    <h2>2. Terapia y Enmascaramiento</h2>
+                    <h2>2. Therapy & Masking</h2>
                 </div>
 
-                <p class="panel-desc">Combina sonidos ambientales con ruido y activa el <strong>Filtro Notch</strong> para descansar tu cerebro.</p>
+                <p class="panel-desc">Combine ambient sounds with noise and activate the <strong>Notch Filter</strong> to rest your brain.</p>
 
-                <!-- Filtro Notch Informativo -->
+                <!-- Informative Notch Filter -->
                 <div class="notch-toggle-card">
                     <div class="notch-top">
                         <div class="notch-info">
-                            <h4>Filtro Notch (Muesca)</h4>
-                            <p>Elimina dinámicamente una banda estrecha alrededor de la frecuencia de tu tinnitus de los sonidos ambientales.</p>
+                            <h4>Notch Filter</h4>
+                            <p>Dynamically removes a narrow band around your tinnitus frequency from ambient sounds.</p>
                         </div>
                         <label class="switch">
                             <input type="checkbox" id="notchToggle">
@@ -210,20 +210,20 @@
                         </label>
                     </div>
                     <div class="notch-badge-container">
-                        <span class="badge" id="notchStatusBadge">Filtro Inactivo</span>
-                        <span class="badge badge-frequency" id="notchFreqBadge">Corte: - Hz</span>
+                        <span class="badge" id="notchStatusBadge">Filter Inactive</span>
+                        <span class="badge badge-frequency" id="notchFreqBadge">Cut: - Hz</span>
                     </div>
                 </div>
 
-                <!-- Mezclador de Sonidos Ambientales -->
+                <!-- Ambient Sounds Mixer -->
                 <div class="control-group">
-                    <label class="group-title">Mezclador de Sonidos Sintetizados</label>
+                    <label class="group-title">Synthesized Sounds Mixer</label>
                     
-                    <!-- Lluvia -->
+                    <!-- Rain -->
                     <div class="ambient-row">
                         <div class="ambient-info">
-                            <span class="ambient-name">Lluvia Suave</span>
-                            <span class="ambient-detail">Ruido marrón con gotas de alta frecuencia</span>
+                            <span class="ambient-name">Gentle Rain</span>
+                            <span class="ambient-detail">Brown noise with high-frequency droplets</span>
                         </div>
                         <div class="ambient-slider">
                             <input type="range" id="volRain" min="0" max="1" step="0.02" value="0" class="slider-neon accent-cyan">
@@ -231,11 +231,11 @@
                         </div>
                     </div>
 
-                    <!-- Océano -->
+                    <!-- Ocean -->
                     <div class="ambient-row">
                         <div class="ambient-info">
-                            <span class="ambient-name">Olas de Océano</span>
-                            <span class="ambient-detail">Modulación lenta de ruido rosa</span>
+                            <span class="ambient-name">Ocean Waves</span>
+                            <span class="ambient-detail">Slow modulation of pink noise</span>
                         </div>
                         <div class="ambient-slider">
                             <input type="range" id="volOcean" min="0" max="1" step="0.02" value="0" class="slider-neon accent-cyan">
@@ -243,11 +243,11 @@
                         </div>
                     </div>
 
-                    <!-- Viento -->
+                    <!-- Wind -->
                     <div class="ambient-row">
                         <div class="ambient-info">
-                            <span class="ambient-name">Viento de Bosque</span>
-                            <span class="ambient-detail">Filtro de paso de banda aleatorio</span>
+                            <span class="ambient-name">Forest Wind</span>
+                            <span class="ambient-detail">Random bandpass filter</span>
                         </div>
                         <div class="ambient-slider">
                             <input type="range" id="volWind" min="0" max="1" step="0.02" value="0" class="slider-neon accent-cyan">
@@ -256,28 +256,28 @@
                     </div>
                 </div>
 
-                <!-- Ruidos de Enmascaramiento Clínico -->
+                <!-- Clinical Masking Noise -->
                 <div class="control-group">
-                    <label class="group-title">Ruido Clínico de Enmascaramiento</label>
+                    <label class="group-title">Clinical Masking Noise</label>
                     <div class="btn-grid-3">
-                        <button class="btn-select-small" id="btnMaskWhite" data-noise="white">Blanco</button>
-                        <button class="btn-select-small" id="btnMaskPink" data-noise="pink">Rosa</button>
-                        <button class="btn-select-small" id="btnMaskBrown" data-noise="brown">Marrón</button>
+                        <button class="btn-select-small" id="btnMaskWhite" data-noise="white">White</button>
+                        <button class="btn-select-small" id="btnMaskPink" data-noise="pink">Pink</button>
+                        <button class="btn-select-small" id="btnMaskBrown" data-noise="brown">Brown</button>
                     </div>
                     <div class="masker-volume-control">
                         <div class="control-header sub-header">
-                            <label for="maskVolume">Volumen del Ruido de Enmascaramiento</label>
+                            <label for="maskVolume">Masking Noise Volume</label>
                             <span class="control-value" id="maskVolumeVal">0%</span>
                         </div>
                         <input type="range" id="maskVolume" min="0" max="1" step="0.01" value="0" class="slider-neon accent-cyan">
                     </div>
                 </div>
 
-                <!-- Temporizador de Apagado (Sleep Timer) -->
+                <!-- Sleep Timer -->
                 <div class="control-group">
                     <div class="control-header">
-                        <label class="group-title">Temporizador de Apagado (Sleep Timer)</label>
-                        <span class="control-value" id="sleepTimerDisplay">Desactivado</span>
+                        <label class="group-title">Sleep Timer</label>
+                        <span class="control-value" id="sleepTimerDisplay">Disabled</span>
                     </div>
                     <div class="btn-grid-5">
                         <button class="btn-select-small active" id="btnSleepOff" data-minutes="0">Off</button>
@@ -288,29 +288,29 @@
                     </div>
                 </div>
 
-                <!-- Botón de parada rápida de terapia -->
+                <!-- Emergency Stop Button -->
                 <button id="btnStopTherapy" class="btn-danger btn-full">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/></svg>
-                    Silenciar Todo el Enmascaramiento
+                    Mute All Masking
                 </button>
             </section>
 
-            <!-- PANEL 3: INHIBICIÓN RESIDUAL Y EXPERIMENTOS -->
+            <!-- PANEL 3: RESIDUAL INHIBITION AND SCIENCE -->
             <section class="panel glass-panel" id="panelExperiments">
                 <div class="panel-header">
                     <div class="panel-icon icon-indigo">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                     </div>
-                    <h2>3. Inhibición y Ciencia</h2>
+                    <h2>3. Inhibition & Science</h2>
                 </div>
 
-                <!-- Sección: Inhibición Residual -->
+                <!-- Section: Residual Inhibition -->
                 <div class="sub-panel-section">
-                    <h3>Inhibición Residual (Apagado Temporal)</h3>
-                    <p class="panel-desc">Al escuchar un sonido que imita tu tinnitus por un período corto, el cerebro a veces silencia temporalmente su percepción.</p>
+                    <h3>Residual Inhibition (Temporary Suppression)</h3>
+                    <p class="panel-desc">By listening to a sound that mimics your tinnitus for a short period, the brain sometimes temporarily suppresses its perception.</p>
                     
                     <div class="ri-timer-container">
-                        <!-- Círculo de progreso SVG -->
+                        <!-- SVG Progress Circle -->
                         <div class="circular-progress">
                             <svg class="progress-ring" width="120" height="120">
                                 <circle class="progress-ring__circle-bg" stroke="rgba(255,255,255,0.05)" stroke-width="6" fill="transparent" r="52" cx="60" cy="60"/>
@@ -325,49 +325,49 @@
                                 <button class="btn-preset" data-time="60">60s</button>
                                 <button class="btn-preset" data-time="120">2m</button>
                             </div>
-                            <button id="btnStartRI" class="btn-indigo-action">Iniciar Terapia RI</button>
+                            <button id="btnStartRI" class="btn-indigo-action">Start RI Therapy</button>
                         </div>
                     </div>
                     <div class="ri-warning">
                         <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
-                        <span>Deberá reproducirse al mismo volumen que tu tinnitus. Si duele o molesta, deténlo.</span>
+                        <span>It should be played at the same volume as your tinnitus. If it hurts or is uncomfortable, stop it.</span>
                     </div>
                 </div>
 
-                <!-- Divisor visual -->
+                <!-- Visual Divider -->
                 <div class="divider"></div>
 
-                <!-- Sección: Cancelación Física por Desfase (Explicativa e Interactiva) -->
+                <!-- Section: Phase Inversion Experiment -->
                 <div class="sub-panel-section">
-                    <h3>Experimento de Onda Inversa (Fase)</h3>
-                    <p class="panel-desc">Explora el comportamiento de las ondas sonoras colisionando en desfase en el espacio físico.</p>
+                    <h3>Inverse Wave Experiment (Phase)</h3>
+                    <p class="panel-desc">Explore how sound waves behave when colliding out of phase in physical space.</p>
 
                     <div class="phase-experiment-card">
                         <div class="phase-header">
-                            <span>Modo de Fase</span>
+                            <span>Phase Mode</span>
                             <div class="phase-controls">
-                                <button class="btn-toggle-phase active" id="btnPhaseNormal" data-phase="0">En Fase (0°)</button>
-                                <button class="btn-toggle-phase" id="btnPhaseInverted" data-phase="180">Invertida (180°)</button>
+                                <button class="btn-toggle-phase active" id="btnPhaseNormal" data-phase="0">In Phase (0°)</button>
+                                <button class="btn-toggle-phase" id="btnPhaseInverted" data-phase="180">Inverted (180°)</button>
                             </div>
                         </div>
 
                         <div class="phase-visualization">
-                            <!-- Visual de ondas representativa -->
+                            <!-- Wave bars visualizer -->
                             <div class="wave-visual-container">
                                 <div class="wave-bar blue-wave" id="waveNormal"></div>
                                 <div class="wave-bar red-wave" id="waveInverted"></div>
                             </div>
-                            <span class="wave-relation-label" id="waveRelationText">Las ondas se suman (mayor amplitud física)</span>
+                            <span class="wave-relation-label" id="waveRelationText">Waves sum up (constructive physical interference)</span>
                         </div>
 
-                        <!-- Información Didáctica -->
+                        <!-- Educational Alert -->
                         <div class="info-alert">
-                            <span class="alert-title">¿Qué ocurre?</span>
+                            <span class="alert-title">What happens?</span>
                             <p id="phaseEduText">
-                                Al reproducir una onda senoidal en fase (0°) en ambos canales, las ondas se suman en el aire. Si invertimos la fase a 180° en un canal y usas altavoces externos, las ondas colisionan en el aire y la intensidad física disminuye por interferencia destructiva. 
+                                When playing a sine wave in phase (0°) in both channels, the waves add up in the air. If we invert the phase to 180° in one channel and you use external speakers, the waves collide in the air and physical intensity decreases due to destructive interference.
                             </p>
                             <p class="alert-footnote">
-                                <strong>Nota médica:</strong> Si usas auriculares, no colisionan en el aire y tu cerebro escuchará ambos lados por separado. Recuerda que al ser tu tinnitus de origen neurológico (cerebro), la onda física invertida no colisionará con él.
+                                <strong>Medical note:</strong> If you use headphones, they do not mix in the air and your brain will hear both sides independently. Since your tinnitus is neurological (brain-based), the inverted physical wave will not cancel it.
                             </p>
                         </div>
                     </div>
@@ -375,17 +375,17 @@
             </section>
         </main>
 
-        <!-- FOOTER / DESCARGO DE RESPONSABILIDAD -->
+        <!-- FOOTER / MEDICAL DISCLAIMER -->
         <footer class="main-footer">
             <div class="disclaimer">
-                <h5>⚠️ Descargo de Responsabilidad Médica</h5>
-                <p>Esta aplicación es una herramienta interactiva de exploración acústica y apoyo terapéutico. No es un dispositivo médico, no proporciona diagnósticos y no reemplaza el consejo, diagnóstico o tratamiento de un profesional de la salud o audiólogo. Utiliza auriculares a volúmenes seguros para evitar daños auditivos adicionales.</p>
+                <h5>⚠️ Medical Disclaimer</h5>
+                <p>This application is an interactive sound exploration and therapeutic support tool. It is not a medical device, does not provide diagnostics, and does not replace the advice, diagnosis, or treatment of a health professional or audiologist. Use headphones at safe volumes to avoid further hearing damage.</p>
             </div>
-            <p class="copyright">&copy; 2026 Tinnitune. Diseñado para la experimentación audiológica y la relajación.</p>
+            <p class="copyright">&copy; 2026 Tinnitune. Designed for audiological experimentation and relaxation.</p>
         </footer>
     </div>
 
-    <!-- Script principal -->
+    <!-- Main Script -->
     <script src="app.js"></script>
 </body>
 </html>
