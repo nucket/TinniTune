@@ -160,8 +160,15 @@ async function initAudio() {
     // Generate static noise buffers to play instantly in loop
     generateNoiseBuffers();
 
-    // Start background soundscapes (silent at first)
+    // Start background soundscapes (initialized to current slider values)
     initSoundscapes();
+
+    // If a masker was active (loaded from preset), start it now
+    if (activeMaskerType) {
+        const tempType = activeMaskerType;
+        activeMaskerType = null; // reset to allow playMaskerNoise to execute
+        playMaskerNoise(tempType);
+    }
 
     // Visualizer loop start
     drawVisualizer();
@@ -449,7 +456,7 @@ function initSoundscapes() {
     // 1. OCEAN WAVES SYNTHESIS
     // Pink noise source -> Lowpass Filter modulated by LFO (creates tide movement)
     soundscapes.ocean.gain = audioCtx.createGain();
-    soundscapes.ocean.gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    soundscapes.ocean.gain.gain.setValueAtTime(parseFloat(volOceanSlider.value) * 0.5, audioCtx.currentTime);
 
     soundscapes.ocean.source = audioCtx.createBufferSource();
     soundscapes.ocean.source.buffer = buffers.pink;
@@ -485,7 +492,7 @@ function initSoundscapes() {
     // 2. RAIN SYNTHESIS
     // Brown noise (rumble) combined with high-pass pink noise (patter)
     soundscapes.rain.gain = audioCtx.createGain();
-    soundscapes.rain.gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    soundscapes.rain.gain.gain.setValueAtTime(parseFloat(volRainSlider.value) * 0.5, audioCtx.currentTime);
 
     soundscapes.rain.source = audioCtx.createBufferSource();
     soundscapes.rain.source.buffer = buffers.brown;
@@ -503,7 +510,7 @@ function initSoundscapes() {
     // 3. FOREST WIND SYNTHESIS
     // Pink noise -> bandpass filter modulated by LFO (gusts)
     soundscapes.wind.gain = audioCtx.createGain();
-    soundscapes.wind.gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    soundscapes.wind.gain.gain.setValueAtTime(parseFloat(volWindSlider.value) * 0.5, audioCtx.currentTime);
 
     soundscapes.wind.source = audioCtx.createBufferSource();
     soundscapes.wind.source.buffer = buffers.pink;
@@ -533,7 +540,7 @@ function initSoundscapes() {
 
     // 4. CLINICAL MASKERS INITIALIZATION
     maskerGain = audioCtx.createGain();
-    maskerGain.gain.setValueAtTime(0, audioCtx.currentTime);
+    maskerGain.gain.setValueAtTime(parseFloat(maskVolumeSlider.value), audioCtx.currentTime);
     maskerGain.connect(therapyNotchFilter);
 }
 
@@ -1124,3 +1131,279 @@ btnPhaseInverted.addEventListener('click', () => {
     });
 });
 
+// ==========================================================================
+// 8. PRESET MANAGER SYSTEM
+// ==========================================================================
+
+// DOM Elements for Presets
+const presetNameInput = document.getElementById('presetName');
+const btnSavePreset = document.getElementById('btnSavePreset');
+const presetsListContainer = document.getElementById('presetsList');
+
+// Key for LocalStorage
+const PRESETS_STORAGE_KEY = 'tinnitune_presets';
+
+// Helper to get presets from LocalStorage
+function getPresets() {
+    try {
+        const stored = localStorage.getItem(PRESETS_STORAGE_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        console.error('Error reading presets:', e);
+        return [];
+    }
+}
+
+// Helper to save presets to LocalStorage
+function savePresetsToStorage(presets) {
+    try {
+        localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets));
+    } catch (e) {
+        console.error('Error saving presets:', e);
+    }
+}
+
+// Render presets list in the UI
+function renderPresets() {
+    presetsListContainer.innerHTML = '';
+    const presets = getPresets();
+
+    if (presets.length === 0) {
+        presetsListContainer.innerHTML = '<span class="no-presets">No hay ajustes guardados</span>';
+        return;
+    }
+
+    presets.forEach(preset => {
+        const item = document.createElement('div');
+        item.className = 'preset-item';
+        item.setAttribute('data-id', preset.id);
+
+        // Format frequency display
+        const freq = parseInt(preset.freqCoarse) + parseInt(preset.freqFine);
+        const freqText = freq >= 1000 ? (freq / 1000).toFixed(2) + ' kHz' : freq + ' Hz';
+
+        // Wave type translation
+        let waveTypeText = 'Tono';
+        if (preset.waveType === 'narrowband') waveTypeText = 'Banda Estrecha';
+        else if (preset.waveType === 'white') waveTypeText = 'R. Blanco';
+        else if (preset.waveType === 'pink') waveTypeText = 'R. Rosa';
+
+        item.innerHTML = `
+            <div class="preset-info">
+                <span class="preset-name">${escapeHtml(preset.name)}</span>
+                <span class="preset-meta">${freqText} (${waveTypeText})</span>
+            </div>
+            <button class="btn-delete-preset" title="Eliminar ajuste">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+            </button>
+        `;
+
+        // Click on preset to load
+        item.addEventListener('click', (e) => {
+            // If click was on delete button, do not load
+            if (e.target.closest('.btn-delete-preset')) return;
+            loadPreset(preset.id);
+        });
+
+        // Click delete button
+        item.querySelector('.btn-delete-preset').addEventListener('click', (e) => {
+            e.stopPropagation();
+            deletePreset(preset.id);
+        });
+
+        presetsListContainer.appendChild(item);
+    });
+}
+
+// Escape HTML utility to prevent XSS
+function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#039;');
+}
+
+// Save current settings as a new preset
+function saveCurrentPreset() {
+    const name = presetNameInput.value.trim();
+    if (!name) {
+        alert('Por favor, ingresa un nombre para el ajuste.');
+        return;
+    }
+
+    const newPreset = {
+        id: Date.now(),
+        name: name,
+        waveType: activeWaveType,
+        freqCoarse: freqCoarseSlider.value,
+        freqFine: freqFineSlider.value,
+        modEnabled: modToggle.checked,
+        modRate: modRateSlider.value,
+        modDepth: modDepthSlider.value,
+        balance: tinnitusBalanceSlider.value,
+        volume: tinnitusVolumeSlider.value,
+        volRain: volRainSlider.value,
+        volOcean: volOceanSlider.value,
+        volWind: volWindSlider.value,
+        maskVolume: maskVolumeSlider.value,
+        activeMaskerType: activeMaskerType,
+        isNotchActive: isNotchActive
+    };
+
+    const presets = getPresets();
+    presets.push(newPreset);
+    savePresetsToStorage(presets);
+
+    presetNameInput.value = '';
+    renderPresets();
+}
+
+// Load a preset
+function loadPreset(id) {
+    const presets = getPresets();
+    const preset = presets.find(p => p.id === id);
+    if (!preset) return;
+
+    // Update variables
+    activeWaveType = preset.waveType;
+    isNotchActive = preset.isNotchActive;
+    activeMaskerType = preset.activeMaskerType;
+
+    // Update UI elements values
+    freqCoarseSlider.value = preset.freqCoarse;
+    freqFineSlider.value = preset.freqFine;
+    modToggle.checked = preset.modEnabled;
+    modRateSlider.value = preset.modRate;
+    modDepthSlider.value = preset.modDepth;
+    tinnitusBalanceSlider.value = preset.balance;
+    tinnitusVolumeSlider.value = preset.volume;
+    volRainSlider.value = preset.volRain;
+    volOceanSlider.value = preset.volOcean;
+    volWindSlider.value = preset.volWind;
+    maskVolumeSlider.value = preset.maskVolume;
+    notchToggle.checked = preset.isNotchActive;
+
+    // Update active wave button UI
+    waveTypeButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-type') === preset.waveType);
+    });
+
+    // Update masker buttons UI
+    btnMaskWhite.classList.toggle('active', preset.activeMaskerType === 'white');
+    btnMaskPink.classList.toggle('active', preset.activeMaskerType === 'pink');
+    btnMaskBrown.classList.toggle('active', preset.activeMaskerType === 'brown');
+
+    // Update display values text
+    const coarseVal = parseInt(preset.freqCoarse);
+    freqVal.textContent = coarseVal >= 1000 ? (coarseVal / 1000).toFixed(2) + ' kHz' : coarseVal + ' Hz';
+    freqFineVal.textContent = (parseInt(preset.freqFine) > 0 ? '+' : '') + preset.freqFine + ' Hz';
+    modRateVal.textContent = parseFloat(preset.modRate).toFixed(1) + ' Hz';
+    modDepthVal.textContent = preset.modDepth + '%';
+    
+    const balVal = parseFloat(preset.balance);
+    if (balVal === -1) tinnitusBalanceVal.textContent = 'Solo Oído Izquierdo';
+    else if (balVal === 1) tinnitusBalanceVal.textContent = 'Solo Oído Derecho';
+    else if (balVal === 0) tinnitusBalanceVal.textContent = 'Centrado';
+    else if (balVal < 0) tinnitusBalanceVal.textContent = `Izquierda (${Math.round(Math.abs(balVal)*100)}%)`;
+    else tinnitusBalanceVal.textContent = `Derecha (${Math.round(balVal*100)}%)`;
+    
+    tinnitusVolumeVal.textContent = Math.round(preset.volume * 100) + '%';
+    volRainVal.textContent = Math.round(preset.volRain * 100) + '%';
+    volOceanVal.textContent = Math.round(preset.volOcean * 100) + '%';
+    volWindVal.textContent = Math.round(preset.volWind * 100) + '%';
+    maskVolumeVal.textContent = Math.round(preset.maskVolume * 100) + '%';
+
+    // Update notch badges
+    updateNotchFilterState();
+
+    // If audio is running, apply adjustments to active nodes
+    if (audioCtx) {
+        // Update notch frequency
+        updateSynthesizerParams();
+
+        // Update tremolo
+        if (isTinnitusPlaying) {
+            if (preset.modEnabled) {
+                setupTremolo();
+            } else {
+                if (tinnitusModLfo) {
+                    tinnitusModLfo.stop();
+                    tinnitusModLfo.disconnect();
+                    tinnitusModLfo = null;
+                }
+                if (tinnitusModGain) {
+                    tinnitusModGain.gain.setValueAtTime(1.0, audioCtx.currentTime);
+                }
+            }
+        }
+
+        // Update volume & balance
+        if (isTinnitusPlaying && tinnitusVolumeNode) {
+            tinnitusVolumeNode.gain.setValueAtTime(preset.volume, audioCtx.currentTime);
+        }
+        if (isTinnitusPlaying && tinnitusPanner) {
+            if (tinnitusPanner.pan) {
+                tinnitusPanner.pan.setValueAtTime(preset.balance, audioCtx.currentTime);
+            } else {
+                tinnitusPanner.setPosition(preset.balance, 0, 1 - Math.abs(preset.balance));
+            }
+        }
+
+        // If the synthesizer type changed and it is playing, restart it
+        if (isTinnitusPlaying) {
+            stopTinnitusSynthesizer();
+            startTinnitusSynthesizer();
+        }
+
+        // Update ambient gains
+        if (soundscapes.rain.gain) {
+            soundscapes.rain.gain.gain.setValueAtTime(soundscapes.rain.gain.gain.value, audioCtx.currentTime);
+            soundscapes.rain.gain.gain.linearRampToValueAtTime(preset.volRain * 0.5, audioCtx.currentTime + 0.1);
+        }
+        if (soundscapes.ocean.gain) {
+            soundscapes.ocean.gain.gain.setValueAtTime(soundscapes.ocean.gain.gain.value, audioCtx.currentTime);
+            soundscapes.ocean.gain.gain.linearRampToValueAtTime(preset.volOcean * 0.5, audioCtx.currentTime + 0.1);
+        }
+        if (soundscapes.wind.gain) {
+            soundscapes.wind.gain.gain.setValueAtTime(soundscapes.wind.gain.gain.value, audioCtx.currentTime);
+            soundscapes.wind.gain.gain.linearRampToValueAtTime(preset.volWind * 0.5, audioCtx.currentTime + 0.1);
+        }
+
+        // Update active clinical masker
+        if (preset.activeMaskerType) {
+            const type = preset.activeMaskerType;
+            activeMaskerType = null; // force swap
+            playMaskerNoise(type);
+            
+            if (maskerGain) {
+                maskerGain.gain.setValueAtTime(maskerGain.gain.value, audioCtx.currentTime);
+                maskerGain.gain.linearRampToValueAtTime(preset.maskVolume, audioCtx.currentTime + 0.15);
+            }
+        } else {
+            stopMaskerNoise();
+        }
+    }
+}
+
+// Delete a preset
+function deletePreset(id) {
+    let presets = getPresets();
+    presets = presets.filter(p => p.id !== id);
+    savePresetsToStorage(presets);
+    renderPresets();
+}
+
+// Bind events for Presets
+btnSavePreset.addEventListener('click', saveCurrentPreset);
+presetNameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        saveCurrentPreset();
+    }
+});
+
+// Render initial presets on load
+renderPresets();

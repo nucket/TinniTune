@@ -1176,3 +1176,153 @@ input:checked + .slider-round:before {
     width: 15px;
     height: 15px;
 }
+
+/* ==========================================================================
+   PRESET MANAGER SYSTEM
+   ========================================================================== */
+.preset-manager {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-top: 0.5rem;
+}
+
+.preset-input-group {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.input-neon {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--color-text);
+    padding: 0.6rem 0.8rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-family: var(--font-body);
+    outline: none;
+    transition: var(--transition-fast);
+}
+
+.input-neon::placeholder {
+    color: var(--color-text-dim);
+}
+
+.input-neon:focus {
+    border-color: var(--color-cyan);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 10px rgba(6, 198, 227, 0.15);
+}
+
+.btn-primary-sm {
+    background: linear-gradient(135deg, var(--color-purple), var(--color-indigo));
+    color: white;
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: 0 4px 10px var(--color-purple-glow);
+}
+
+.btn-primary-sm:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px var(--color-purple-glow);
+    filter: brightness(1.1);
+}
+
+.btn-primary-sm:active {
+    transform: translateY(0);
+}
+
+.presets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-height: 150px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+/* Custom Scrollbar for Presets List */
+.presets-list::-webkit-scrollbar {
+    width: 4px;
+}
+.presets-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+.presets-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+.presets-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.no-presets {
+    font-size: 0.8rem;
+    color: var(--color-text-dim);
+    text-align: center;
+    padding: 0.8rem 0;
+    font-style: italic;
+}
+
+.preset-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.8rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    transition: var(--transition-fast);
+    cursor: pointer;
+}
+
+.preset-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.preset-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.preset-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.preset-meta {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+}
+
+.btn-delete-preset {
+    background: transparent;
+    color: var(--color-text-dim);
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+}
+
+.btn-delete-preset:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--color-danger);
+}
