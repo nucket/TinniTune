@@ -26,6 +26,10 @@ Tinnitune es una herramienta interactiva basada en web diseñada para la experim
 ### 5. Gestor de Ajustes Personalizados (Presets)
 *   Almacena configuraciones específicas en la sesión del navegador (`localStorage`). Guarda el tipo de zumbido, volumen, balance, sonidos de fondo mezclados y el estado del filtro Notch para cargarlos o borrarlos de manera inmediata.
 
+### 6. Temporizador de Apagado (Sleep Timer) con Desvanecimiento Gradual
+*   Permite seleccionar una duración (15, 30, 45 o 60 minutos) para reproducir los sonidos de fondo.
+*   **Desvanecimiento (Fade Out) Suave**: Durante los últimos 60 segundos del temporizador, el volumen desciende de manera progresiva para evitar cambios bruscos que despierten al usuario, restableciendo la ganancia de forma segura al finalizar.
+
 ---
 
 ## 🛠️ Arquitectura de Audio y Enrutamiento
@@ -93,6 +97,7 @@ Dado que la aplicación realiza operaciones de carga de buffers de audio y visua
 *   **`index.html`**: Estructura semántica, paneles interactivos, SVGs y el lienzo del Canvas.
 *   **`style.css`**: Sistema de diseño basado en CSS Vanilla con variables personalizadas, efectos de cristal translúcido (glassmorphism) y diseño responsivo.
 *   **`app.js`**: Lógica de inicialización del Web Audio API, bucle del visualizador con `requestAnimationFrame` y controladores del DOM.
+*   **`Docs/`**: Directorio de documentación extendida. Contiene [ideas_desarrollo_futuro.md](file:///n:/Person/Project/024-Tinning/Test001/Docs/ideas_desarrollo_futuro.md) con las propuestas de mejora auditiva (Audiogramas, trackers de síntomas, enmascaramiento intermitente, etc.).
 
 ---
 

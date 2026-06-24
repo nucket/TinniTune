@@ -1407,3 +1407,133 @@ presetNameInput.addEventListener('keypress', (e) => {
 
 // Render initial presets on load
 renderPresets();
+
+// ==========================================================================
+// 9. SLEEP TIMER SYSTEM (FADE OUT)
+// ==========================================================================
+let sleepTimerId = null;
+let sleepFadeIntervalId = null;
+let sleepTimeRemaining = 0;
+let originalMasterVolume = 0.5;
+let isFadingOut = false;
+
+const sleepButtons = document.querySelectorAll('.btn-grid-5 button');
+
+function startSleepTimer(minutes) {
+    stopSleepTimerLogic();
+    
+    if (minutes === 0) {
+        updateSleepTimerUI(0);
+        return;
+    }
+    
+    ensureAudioCtx().then(() => {
+        originalMasterVolume = parseFloat(masterVolumeSlider.value);
+        sleepTimeRemaining = minutes * 60;
+        isFadingOut = false;
+        
+        updateSleepTimerUI(minutes);
+        
+        sleepTimerId = setInterval(() => {
+            sleepTimeRemaining--;
+            
+            if (sleepTimeRemaining <= 0) {
+                stopSleepTimerLogic(true);
+                return;
+            }
+            
+            // Format time display
+            const mins = Math.floor(sleepTimeRemaining / 60);
+            const secs = sleepTimeRemaining % 60;
+            document.getElementById('sleepTimerDisplay').textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            
+            // Start fade out in the last 60 seconds
+            if (sleepTimeRemaining <= 60 && !isFadingOut) {
+                isFadingOut = true;
+                startSleepFadeOut(sleepTimeRemaining);
+            }
+        }, 1000);
+    });
+}
+
+function startSleepFadeOut(duration) {
+    let fadeStep = 0;
+    const totalSteps = duration;
+    const startVol = parseFloat(masterVolumeSlider.value);
+    
+    sleepFadeIntervalId = setInterval(() => {
+        fadeStep++;
+        const progress = fadeStep / totalSteps;
+        const currentVol = startVol * (1 - progress);
+        
+        masterVolumeSlider.value = currentVol;
+        masterVolumeVal.textContent = Math.round(currentVol * 100) + '%';
+        if (masterGain) {
+            masterGain.gain.setValueAtTime(currentVol, audioCtx.currentTime);
+        }
+        
+        if (fadeStep >= totalSteps) {
+            clearInterval(sleepFadeIntervalId);
+            sleepFadeIntervalId = null;
+        }
+    }, 1000);
+}
+
+function stopSleepTimerLogic(finished = false) {
+    if (sleepTimerId) {
+        clearInterval(sleepTimerId);
+        sleepTimerId = null;
+    }
+    if (sleepFadeIntervalId) {
+        clearInterval(sleepFadeIntervalId);
+        sleepFadeIntervalId = null;
+    }
+    
+    if (finished) {
+        stopTinnitusSynthesizer(false);
+        stopAllTherapy();
+        stopPhaseExperiment();
+        
+        masterVolumeSlider.value = originalMasterVolume;
+        masterVolumeVal.textContent = Math.round(originalMasterVolume * 100) + '%';
+        if (masterGain) {
+            masterGain.gain.setValueAtTime(originalMasterVolume, audioCtx.currentTime);
+        }
+    } else if (isFadingOut) {
+        masterVolumeSlider.value = originalMasterVolume;
+        masterVolumeVal.textContent = Math.round(originalMasterVolume * 100) + '%';
+        if (masterGain) {
+            masterGain.gain.setValueAtTime(originalMasterVolume, audioCtx.currentTime);
+        }
+    }
+    
+    isFadingOut = false;
+    document.getElementById('sleepTimerDisplay').textContent = 'Desactivado';
+    
+    sleepButtons.forEach(btn => btn.classList.remove('active'));
+    document.getElementById('btnSleepOff').classList.add('active');
+}
+
+function updateSleepTimerUI(minutes) {
+    sleepButtons.forEach(btn => btn.classList.remove('active'));
+    
+    if (minutes === 0) {
+        document.getElementById('btnSleepOff').classList.add('active');
+        document.getElementById('sleepTimerDisplay').textContent = 'Desactivado';
+    } else {
+        const activeBtn = Array.from(sleepButtons).find(btn => parseInt(btn.getAttribute('data-minutes')) === minutes);
+        if (activeBtn) activeBtn.classList.add('active');
+        
+        const mins = Math.floor(sleepTimeRemaining / 60);
+        const secs = sleepTimeRemaining % 60;
+        document.getElementById('sleepTimerDisplay').textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+}
+
+// Bind Sleep Timer events
+sleepButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const mins = parseInt(e.currentTarget.getAttribute('data-minutes'));
+        startSleepTimer(mins);
+    });
+});
