@@ -1,0 +1,1126 @@
+// ==========================================================================
+// TINNITUNE - AUDIO ENGINE AND USER INTERACTION (VANILLA JS)
+// ==========================================================================
+
+// Global state variables
+let audioCtx = null;
+let masterGain = null;
+let analyser = null;
+
+// Tinnitus Synthesizer Node References
+let tinnitusOsc = null;
+let tinnitusNoiseSource = null;
+let tinnitusFilter = null; // for narrowband noise
+let tinnitusModLfo = null;
+let tinnitusModGain = null;
+let tinnitusModLfoGain = null;
+let tinnitusVolumeNode = null;
+let tinnitusPanner = null;
+let isTinnitusPlaying = false;
+
+// Masker Node References
+let maskerSource = null;
+let maskerGain = null;
+let activeMaskerType = null; // 'white', 'pink', 'brown' or null
+
+// Soundscape Nodes
+let soundscapes = {
+    rain: { gain: null, source: null },
+    ocean: { gain: null, source: null, lfo: null, lfoGain: null, filter: null },
+    wind: { gain: null, source: null, lfo: null, lfoGain: null, filter: null }
+};
+
+// Therapy Chain
+let therapyNotchFilter = null; // Filter to cut out tinnitus frequency
+let isNotchActive = false;
+
+// Sound Buffers (Generated once at audio initialization)
+let buffers = {
+    white: null,
+    pink: null,
+    brown: null
+};
+
+// Phase Experiment Nodes
+let phaseOsc = null;
+let phaseGainLeft = null;
+let phaseGainRight = null;
+let phaseMerger = null;
+let isPhaseExpPlaying = false;
+let currentPhaseAngle = 0; // 0 or 180
+
+// Residual Inhibition Timer State
+let riTimerInterval = null;
+let riTimeRemaining = 0;
+let riTotalTime = 60; // default 60s
+let isRiRunning = false;
+
+// DOM Elements
+const btnStartAudio = document.getElementById('btnStartAudio');
+const audioStatus = document.getElementById('audioStatus');
+const masterVolumeSlider = document.getElementById('masterVolume');
+const masterVolumeVal = document.getElementById('masterVolumeVal');
+
+// Matching DOM
+const waveTypeButtons = document.querySelectorAll('#waveTypeGrid .btn-select');
+const freqCoarseSlider = document.getElementById('freqCoarse');
+const freqFineSlider = document.getElementById('freqFine');
+const freqVal = document.getElementById('freqVal');
+const freqFineVal = document.getElementById('freqFineVal');
+
+const modToggle = document.getElementById('modToggle');
+const modRateSlider = document.getElementById('modRate');
+const modDepthSlider = document.getElementById('modDepth');
+const modRateVal = document.getElementById('modRateVal');
+const modDepthVal = document.getElementById('modDepthVal');
+
+const tinnitusBalanceSlider = document.getElementById('tinnitusBalance');
+const tinnitusBalanceVal = document.getElementById('tinnitusBalanceVal');
+const tinnitusVolumeSlider = document.getElementById('tinnitusVolume');
+const tinnitusVolumeVal = document.getElementById('tinnitusVolumeVal');
+const btnPlaySynthesizer = document.getElementById('btnPlaySynthesizer');
+
+// Therapy DOM
+const notchToggle = document.getElementById('notchToggle');
+const notchStatusBadge = document.getElementById('notchStatusBadge');
+const notchFreqBadge = document.getElementById('notchFreqBadge');
+
+const volRainSlider = document.getElementById('volRain');
+const volOceanSlider = document.getElementById('volOcean');
+const volWindSlider = document.getElementById('volWind');
+const volRainVal = document.getElementById('volRainVal');
+const volOceanVal = document.getElementById('volOceanVal');
+const volWindVal = document.getElementById('volWindVal');
+
+const btnMaskWhite = document.getElementById('btnMaskWhite');
+const btnMaskPink = document.getElementById('btnMaskPink');
+const btnMaskBrown = document.getElementById('btnMaskBrown');
+const maskVolumeSlider = document.getElementById('maskVolume');
+const maskVolumeVal = document.getElementById('maskVolumeVal');
+const btnStopTherapy = document.getElementById('btnStopTherapy');
+
+// RI & Phase DOM
+const riProgressCircle = document.getElementById('riProgressCircle');
+const riTimerVal = document.getElementById('riTimerVal');
+const btnStartRI = document.getElementById('btnStartRI');
+const riPresetButtons = document.querySelectorAll('.time-presets .btn-preset');
+
+const btnPhaseNormal = document.getElementById('btnPhaseNormal');
+const btnPhaseInverted = document.getElementById('btnPhaseInverted');
+const waveNormalDiv = document.getElementById('waveNormal');
+const waveInvertedDiv = document.getElementById('waveInverted');
+const waveRelationText = document.getElementById('waveRelationText');
+const phaseEduText = document.getElementById('phaseEduText');
+
+// Canvas Visualizer DOM
+const canvas = document.getElementById('visualizerCanvas');
+const canvasCtx = canvas.getContext('2d');
+
+// Sound synthesis parameters
+let activeWaveType = 'sine'; // sine, narrowband, white, pink
+let currentTinnitusFrequency = 4000;
+
+// Setup resize for Visualizer Canvas
+function resizeCanvas() {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ==========================================================================
+// 1. WEB AUDIO INITIALIZATION & BUFFERS
+// ==========================================================================
+
+async function initAudio() {
+    if (audioCtx) return;
+
+    // Create audio context
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContextClass();
+
+    // Create Master Gain and Analyser
+    masterGain = audioCtx.createGain();
+    masterGain.gain.setValueAtTime(masterVolumeSlider.value, audioCtx.currentTime);
+
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+
+    // Connect analyzer to master gain, and master gain to speakers
+    analyser.connect(masterGain);
+    masterGain.connect(audioCtx.destination);
+
+    // Create Therapy Notch Filter (placed in the path of Maskers and Soundscapes)
+    therapyNotchFilter = audioCtx.createBiquadFilter();
+    therapyNotchFilter.type = isNotchActive ? 'notch' : 'allpass';
+    therapyNotchFilter.frequency.setValueAtTime(getCombinedFrequency(), audioCtx.currentTime);
+    therapyNotchFilter.Q.setValueAtTime(12.0, audioCtx.currentTime); // narrow band cut
+    therapyNotchFilter.connect(analyser);
+
+    // Generate static noise buffers to play instantly in loop
+    generateNoiseBuffers();
+
+    // Start background soundscapes (silent at first)
+    initSoundscapes();
+
+    // Visualizer loop start
+    drawVisualizer();
+
+    // Update UI Status
+    audioStatus.classList.add('connected');
+    audioStatus.querySelector('.status-text').textContent = 'Audio Conectado';
+    btnStartAudio.textContent = 'Motor Activo';
+    btnStartAudio.disabled = true;
+    btnStartAudio.classList.remove('btn-glow');
+}
+
+// Generate White, Pink, and Brown Noise buffers
+function generateNoiseBuffers() {
+    const sampleRate = audioCtx.sampleRate;
+    const bufferSize = sampleRate * 2; // 2 seconds loop
+
+    // 1. White Noise
+    buffers.white = audioCtx.createBuffer(1, bufferSize, sampleRate);
+    const whiteData = buffers.white.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        whiteData[i] = Math.random() * 2 - 1;
+    }
+
+    // 2. Pink Noise (Voss-McCartney approximation)
+    buffers.pink = audioCtx.createBuffer(1, bufferSize, sampleRate);
+    const pinkData = buffers.pink.getChannelData(0);
+    let b0, b1, b2, b3, b4, b5, b6;
+    b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
+    for (let i = 0; i < bufferSize; i++) {
+        let white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        pinkData[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+        pinkData[i] *= 0.11; // normalise to safe range
+        b6 = white * 0.115926;
+    }
+
+    // 3. Brown Noise (Filtered random walk)
+    buffers.brown = audioCtx.createBuffer(1, bufferSize, sampleRate);
+    const brownData = buffers.brown.getChannelData(0);
+    let lastOut = 0.0;
+    for (let i = 0; i < bufferSize; i++) {
+        let white = Math.random() * 2 - 1;
+        brownData[i] = (lastOut + (0.02 * white)) / 1.02;
+        lastOut = brownData[i];
+        brownData[i] *= 3.5; // normalise to safe range
+    }
+}
+
+// Get the actual computed frequency (Coarse slider + Fine sintonization)
+function getCombinedFrequency() {
+    const coarse = parseFloat(freqCoarseSlider.value);
+    const fine = parseFloat(freqFineSlider.value);
+    // Bind output range
+    return Math.max(20, Math.min(20000, coarse + fine));
+}
+
+// Ensure audio context is running (fixes browser resume policies)
+async function ensureAudioCtx() {
+    if (!audioCtx) {
+        await initAudio();
+    }
+    if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+    }
+}
+
+// ==========================================================================
+// 2. TINNITUS SYNTHESIZER MODULE
+// ==========================================================================
+
+function startTinnitusSynthesizer() {
+    if (isTinnitusPlaying) return;
+    
+    // Safety check
+    if (isPhaseExpPlaying) {
+        stopPhaseExperiment();
+    }
+
+    const freq = getCombinedFrequency();
+    const vol = parseFloat(tinnitusVolumeSlider.value);
+    const pan = parseFloat(tinnitusBalanceSlider.value);
+
+    // Create Synthesizer Gain
+    tinnitusVolumeNode = audioCtx.createGain();
+    tinnitusVolumeNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+
+    // Create Modulator (Tremolo) Gain
+    tinnitusModGain = audioCtx.createGain();
+    tinnitusModGain.gain.setValueAtTime(1.0, audioCtx.currentTime);
+
+    // Create Panner
+    if (audioCtx.createStereoPanner) {
+        tinnitusPanner = audioCtx.createStereoPanner();
+        tinnitusPanner.pan.setValueAtTime(pan, audioCtx.currentTime);
+    } else {
+        // Fallback panner
+        tinnitusPanner = audioCtx.createPanner();
+        tinnitusPanner.panningModel = 'HRTF';
+        tinnitusPanner.setPosition(pan, 0, 1 - Math.abs(pan));
+    }
+
+    // Set up Sound Source based on active selection
+    if (activeWaveType === 'sine') {
+        // Pure Tone (Sine Oscillator)
+        tinnitusOsc = audioCtx.createOscillator();
+        tinnitusOsc.type = 'sine';
+        tinnitusOsc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        tinnitusOsc.connect(tinnitusModGain);
+        tinnitusOsc.start();
+    } else if (activeWaveType === 'narrowband') {
+        // Narrowband Noise (White noise filtered with tight bandpass)
+        tinnitusNoiseSource = audioCtx.createBufferSource();
+        tinnitusNoiseSource.buffer = buffers.white;
+        tinnitusNoiseSource.loop = true;
+
+        tinnitusFilter = audioCtx.createBiquadFilter();
+        tinnitusFilter.type = 'bandpass';
+        tinnitusFilter.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        // High Q (35.0) isolates a very narrow band of frequency resembling high whistle
+        tinnitusFilter.Q.setValueAtTime(35.0, audioCtx.currentTime);
+
+        tinnitusNoiseSource.connect(tinnitusFilter);
+        tinnitusFilter.connect(tinnitusModGain);
+        tinnitusNoiseSource.start();
+    } else {
+        // Broadband Noise (White or Pink)
+        tinnitusNoiseSource = audioCtx.createBufferSource();
+        tinnitusNoiseSource.buffer = activeWaveType === 'white' ? buffers.white : buffers.pink;
+        tinnitusNoiseSource.loop = true;
+
+        tinnitusNoiseSource.connect(tinnitusModGain);
+        tinnitusNoiseSource.start();
+    }
+
+    // Connect Tremolo LFO if enabled
+    if (modToggle.checked) {
+        setupTremolo();
+    }
+
+    // Chain: Source -> Mod Gain -> Volume -> Stereo Panner -> Output Analyzer
+    tinnitusModGain.connect(tinnitusVolumeNode);
+    tinnitusVolumeNode.connect(tinnitusPanner);
+    tinnitusPanner.connect(analyser);
+
+    isTinnitusPlaying = true;
+    btnPlaySynthesizer.innerHTML = `
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        Detener Sintetizador
+    `;
+    btnPlaySynthesizer.classList.add('active-playing');
+}
+
+function stopTinnitusSynthesizer(fadeOut = false) {
+    if (!isTinnitusPlaying) return;
+
+    const stopNodes = () => {
+        try {
+            if (tinnitusOsc) {
+                tinnitusOsc.stop();
+                tinnitusOsc.disconnect();
+                tinnitusOsc = null;
+            }
+            if (tinnitusNoiseSource) {
+                tinnitusNoiseSource.stop();
+                tinnitusNoiseSource.disconnect();
+                tinnitusNoiseSource = null;
+            }
+            if (tinnitusFilter) {
+                tinnitusFilter.disconnect();
+                tinnitusFilter = null;
+            }
+            if (tinnitusModLfo) {
+                tinnitusModLfo.stop();
+                tinnitusModLfo.disconnect();
+                tinnitusModLfo = null;
+            }
+            if (tinnitusModGain) {
+                tinnitusModGain.disconnect();
+                tinnitusModGain = null;
+            }
+            if (tinnitusModLfoGain) {
+                tinnitusModLfoGain.disconnect();
+                tinnitusModLfoGain = null;
+            }
+            if (tinnitusPanner) {
+                tinnitusPanner.disconnect();
+                tinnitusPanner = null;
+            }
+            if (tinnitusVolumeNode) {
+                tinnitusVolumeNode.disconnect();
+                tinnitusVolumeNode = null;
+            }
+        } catch (e) {
+            console.warn('Error stopping nodes:', e);
+        }
+        isTinnitusPlaying = false;
+        btnPlaySynthesizer.innerHTML = `
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
+            Escuchar Sintonizador
+        `;
+        btnPlaySynthesizer.classList.remove('active-playing');
+    };
+
+    if (fadeOut && tinnitusVolumeNode) {
+        // Smooth fade out to protect hearing
+        tinnitusVolumeNode.gain.setValueAtTime(tinnitusVolumeNode.gain.value, audioCtx.currentTime);
+        tinnitusVolumeNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+        setTimeout(stopNodes, 1300);
+    } else {
+        stopNodes();
+    }
+}
+
+// Configures and connects the trémolo LFO modulator
+function setupTremolo() {
+    if (!audioCtx || !tinnitusModGain) return;
+
+    // Disconnect old LFO if it exists
+    if (tinnitusModLfo) {
+        tinnitusModLfo.stop();
+        tinnitusModLfo.disconnect();
+        tinnitusModLfo = null;
+    }
+    if (tinnitusModLfoGain) {
+        tinnitusModLfoGain.disconnect();
+        tinnitusModLfoGain = null;
+    }
+
+    const rate = parseFloat(modRateSlider.value);
+    const depth = parseFloat(modDepthSlider.value) / 100.0; // 0.0 to 1.0
+
+    // Mod LFO Node (Sine wave LFO)
+    tinnitusModLfo = audioCtx.createOscillator();
+    tinnitusModLfo.type = 'sine';
+    tinnitusModLfo.frequency.setValueAtTime(rate, audioCtx.currentTime);
+
+    // LFO Gain determines the amplitude of volume swings
+    tinnitusModLfoGain = audioCtx.createGain();
+    tinnitusModLfoGain.gain.setValueAtTime(depth * 0.5, audioCtx.currentTime);
+
+    // Offset the main modulator gain value to remain balanced
+    tinnitusModGain.gain.setValueAtTime(1.0 - (depth * 0.5), audioCtx.currentTime);
+
+    // Connections
+    tinnitusModLfo.connect(tinnitusModLfoGain);
+    tinnitusModLfoGain.connect(tinnitusModGain.gain); // Modulate target parameter
+
+    tinnitusModLfo.start();
+}
+
+// Update active synthesiser parameters dynamically
+function updateSynthesizerParams() {
+    const freq = getCombinedFrequency();
+    
+    // Update Frequency of Active Oscillator or Filter
+    if (isTinnitusPlaying) {
+        if (tinnitusOsc) {
+            tinnitusOsc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        }
+        if (tinnitusFilter) {
+            tinnitusFilter.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        }
+    }
+
+    // Update Notch filter target if active
+    if (therapyNotchFilter) {
+        therapyNotchFilter.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        notchFreqBadge.textContent = `Corte: ${Math.round(freq)} Hz`;
+    }
+}
+
+// ==========================================================================
+// 3. ENMASCARAMIENTO & SOUNDSCAPES MODULE (NOTCHED THERAPY)
+// ==========================================================================
+
+function initSoundscapes() {
+    // Generate nature soundscapes using audio filters and LFOs
+    
+    // 1. OCEAN WAVES SYNTHESIS
+    // Pink noise source -> Lowpass Filter modulated by LFO (creates tide movement)
+    soundscapes.ocean.gain = audioCtx.createGain();
+    soundscapes.ocean.gain.gain.setValueAtTime(0, audioCtx.currentTime);
+
+    soundscapes.ocean.source = audioCtx.createBufferSource();
+    soundscapes.ocean.source.buffer = buffers.pink;
+    soundscapes.ocean.source.loop = true;
+
+    soundscapes.ocean.filter = audioCtx.createBiquadFilter();
+    soundscapes.ocean.filter.type = 'lowpass';
+    soundscapes.ocean.filter.frequency.setValueAtTime(400, audioCtx.currentTime);
+    soundscapes.ocean.filter.Q.setValueAtTime(1.0, audioCtx.currentTime);
+
+    // LFO to simulate waves (cycle speed: ~8 seconds or 0.12 Hz)
+    soundscapes.ocean.lfo = audioCtx.createOscillator();
+    soundscapes.ocean.lfo.type = 'sine';
+    soundscapes.ocean.lfo.frequency.setValueAtTime(0.12, audioCtx.currentTime);
+
+    soundscapes.ocean.lfoGain = audioCtx.createGain();
+    soundscapes.ocean.lfoGain.gain.setValueAtTime(250, audioCtx.currentTime); // modulate LP filter by +-250Hz
+
+    // Connect LFO modulator to filter cutoff frequency
+    soundscapes.ocean.lfo.connect(soundscapes.ocean.lfoGain);
+    soundscapes.ocean.lfoGain.connect(soundscapes.ocean.filter.frequency);
+
+    // Signal path
+    soundscapes.ocean.source.connect(soundscapes.ocean.filter);
+    soundscapes.ocean.filter.connect(soundscapes.ocean.gain);
+    // Connect to Notched Filter
+    soundscapes.ocean.gain.connect(therapyNotchFilter);
+
+    // Start waves
+    soundscapes.ocean.lfo.start();
+    soundscapes.ocean.source.start();
+
+    // 2. RAIN SYNTHESIS
+    // Brown noise (rumble) combined with high-pass pink noise (patter)
+    soundscapes.rain.gain = audioCtx.createGain();
+    soundscapes.rain.gain.gain.setValueAtTime(0, audioCtx.currentTime);
+
+    soundscapes.rain.source = audioCtx.createBufferSource();
+    soundscapes.rain.source.buffer = buffers.brown;
+    soundscapes.rain.source.loop = true;
+
+    const rainFilter = audioCtx.createBiquadFilter();
+    rainFilter.type = 'lowpass';
+    rainFilter.frequency.setValueAtTime(800, audioCtx.currentTime);
+
+    soundscapes.rain.source.connect(rainFilter);
+    rainFilter.connect(soundscapes.rain.gain);
+    soundscapes.rain.gain.connect(therapyNotchFilter);
+    soundscapes.rain.source.start();
+
+    // 3. FOREST WIND SYNTHESIS
+    // Pink noise -> bandpass filter modulated by LFO (gusts)
+    soundscapes.wind.gain = audioCtx.createGain();
+    soundscapes.wind.gain.gain.setValueAtTime(0, audioCtx.currentTime);
+
+    soundscapes.wind.source = audioCtx.createBufferSource();
+    soundscapes.wind.source.buffer = buffers.pink;
+    soundscapes.wind.source.loop = true;
+
+    soundscapes.wind.filter = audioCtx.createBiquadFilter();
+    soundscapes.wind.filter.type = 'bandpass';
+    soundscapes.wind.filter.frequency.setValueAtTime(300, audioCtx.currentTime);
+    soundscapes.wind.filter.Q.setValueAtTime(2.5, audioCtx.currentTime);
+
+    soundscapes.wind.lfo = audioCtx.createOscillator();
+    soundscapes.wind.lfo.type = 'sine';
+    soundscapes.wind.lfo.frequency.setValueAtTime(0.08, audioCtx.currentTime); // very slow gusts
+
+    soundscapes.wind.lfoGain = audioCtx.createGain();
+    soundscapes.wind.lfoGain.gain.setValueAtTime(150, audioCtx.currentTime);
+
+    soundscapes.wind.lfo.connect(soundscapes.wind.lfoGain);
+    soundscapes.wind.lfoGain.connect(soundscapes.wind.filter.frequency);
+
+    soundscapes.wind.source.connect(soundscapes.wind.filter);
+    soundscapes.wind.filter.connect(soundscapes.wind.gain);
+    soundscapes.wind.gain.connect(therapyNotchFilter);
+
+    soundscapes.wind.lfo.start();
+    soundscapes.wind.source.start();
+
+    // 4. CLINICAL MASKERS INITIALIZATION
+    maskerGain = audioCtx.createGain();
+    maskerGain.gain.setValueAtTime(0, audioCtx.currentTime);
+    maskerGain.connect(therapyNotchFilter);
+}
+
+// Toggle clinically generated masking noise
+function playMaskerNoise(type) {
+    if (!audioCtx) return;
+
+    // If clicking already playing active type, stop it
+    if (activeMaskerType === type) {
+        stopMaskerNoise();
+        return;
+    }
+
+    // Stop current source if running
+    if (maskerSource) {
+        try { maskerSource.stop(); } catch(e){}
+        maskerSource.disconnect();
+        maskerSource = null;
+    }
+
+    // Create loop source
+    maskerSource = audioCtx.createBufferSource();
+    if (type === 'white') maskerSource.buffer = buffers.white;
+    else if (type === 'pink') maskerSource.buffer = buffers.pink;
+    else if (type === 'brown') maskerSource.buffer = buffers.brown;
+    
+    maskerSource.loop = true;
+    maskerSource.connect(maskerGain);
+    maskerSource.start();
+
+    activeMaskerType = type;
+
+    // Update UI Buttons
+    btnMaskWhite.classList.toggle('active', type === 'white');
+    btnMaskPink.classList.toggle('active', type === 'pink');
+    btnMaskBrown.classList.toggle('active', type === 'brown');
+
+    // Fade in volume to match slider if it was set
+    const vol = parseFloat(maskVolumeSlider.value);
+    maskerGain.gain.setValueAtTime(maskerGain.gain.value, audioCtx.currentTime);
+    maskerGain.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.3);
+}
+
+function stopMaskerNoise() {
+    if (!maskerGain) return;
+    
+    maskerGain.gain.setValueAtTime(maskerGain.gain.value, audioCtx.currentTime);
+    maskerGain.gain.linearRampToValueAtTime(0.0, audioCtx.currentTime + 0.5);
+
+    setTimeout(() => {
+        if (maskerSource && activeMaskerType === null) {
+            try { maskerSource.stop(); } catch(e){}
+            maskerSource.disconnect();
+            maskerSource = null;
+        }
+    }, 600);
+
+    activeMaskerType = null;
+    btnMaskWhite.classList.remove('active');
+    btnMaskPink.classList.remove('active');
+    btnMaskBrown.classList.remove('active');
+}
+
+// Set Notch Filter Mode
+function updateNotchFilterState() {
+    if (!therapyNotchFilter) return;
+
+    if (isNotchActive) {
+        therapyNotchFilter.type = 'notch';
+        notchStatusBadge.textContent = 'Filtro Activo';
+        notchStatusBadge.classList.add('active');
+        notchFreqBadge.classList.add('active');
+        notchFreqBadge.textContent = `Corte: ${Math.round(getCombinedFrequency())} Hz`;
+    } else {
+        therapyNotchFilter.type = 'allpass'; // Bypass
+        notchStatusBadge.textContent = 'Filtro Inactivo';
+        notchStatusBadge.classList.remove('active');
+        notchFreqBadge.classList.remove('active');
+    }
+}
+
+// Silence all therapeutic masking soundscapes
+function stopAllTherapy() {
+    // Fade out ambient sounds
+    const fadeOutSlider = (slider, valElement, gainNode) => {
+        slider.value = 0;
+        valElement.textContent = '0%';
+        if (gainNode) {
+            gainNode.gain.setValueAtTime(gainNode.gain.value, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.8);
+        }
+    };
+
+    fadeOutSlider(volRainSlider, volRainVal, soundscapes.rain.gain);
+    fadeOutSlider(volOceanSlider, volOceanVal, soundscapes.ocean.gain);
+    fadeOutSlider(volWindSlider, volWindVal, soundscapes.wind.gain);
+    
+    // Stop clinical masker noise
+    stopMaskerNoise();
+    maskVolumeSlider.value = 0;
+    maskVolumeVal.textContent = '0%';
+}
+
+// ==========================================================================
+// 4. RESIDUAL INHIBITION MODULE (TIMER CONTROL)
+// ==========================================================================
+
+function startResidualInhibition() {
+    if (isRiRunning) {
+        stopResidualInhibition();
+        return;
+    }
+
+    ensureAudioCtx().then(() => {
+        isRiRunning = true;
+        btnStartRI.textContent = 'Detener Terapia RI';
+        btnStartRI.classList.add('active');
+
+        // Turn off soundscapes/maskers during testing to focus on tone
+        stopAllTherapy();
+
+        // Start matching tone
+        // Lock UI parameters or ensure match synthesizer is playing
+        if (!isTinnitusPlaying) {
+            startTinnitusSynthesizer();
+        }
+
+        // Set matching volume slightly higher or match it
+        const originalVol = parseFloat(tinnitusVolumeSlider.value);
+        tinnitusVolumeNode.gain.setValueAtTime(originalVol, audioCtx.currentTime);
+
+        // Timer initialization
+        riTimeRemaining = riTotalTime;
+        updateRiProgress();
+
+        riTimerInterval = setInterval(() => {
+            riTimeRemaining--;
+            updateRiProgress();
+
+            if (riTimeRemaining <= 0) {
+                // Done!
+                stopResidualInhibition(true);
+                alert('Sesión de Inhibición Residual completada.\n\nPresta atención a tu oído izquierdo: ¿se ha silenciado o disminuido el zumbido? (Normalmente puede durar de 30s a 2m).');
+            }
+        }, 1000);
+    });
+}
+
+function stopResidualInhibition(finished = false) {
+    if (!isRiRunning) return;
+
+    clearInterval(riTimerInterval);
+    riTimerInterval = null;
+    isRiRunning = false;
+    btnStartRI.textContent = 'Iniciar Terapia RI';
+    btnStartRI.classList.remove('active');
+
+    // Reset progress circle
+    setProgress(100);
+    riTimerVal.textContent = riTotalTime + 's';
+
+    // Stop synthesizer tone (smoothly fade out if completed)
+    stopTinnitusSynthesizer(finished);
+}
+
+function updateRiProgress() {
+    riTimerVal.textContent = riTimeRemaining + 's';
+    const pct = (riTimeRemaining / riTotalTime) * 100;
+    setProgress(pct);
+}
+
+// Progress Ring Controller
+function setProgress(percent) {
+    // Circumference of our progress ring is 326.7 (calculated from r=52)
+    const circumference = 326.7;
+    const offset = circumference - (percent / 100 * circumference);
+    riProgressCircle.style.strokeDashoffset = offset;
+}
+
+// ==========================================================================
+// 5. PHASE INVERSION EXPERIMENT MODULE (PHYSICAL ANC DEMO)
+// ==========================================================================
+
+function startPhaseExperiment() {
+    if (!audioCtx) return;
+
+    if (isTinnitusPlaying) {
+        stopTinnitusSynthesizer();
+    }
+
+    const freq = getCombinedFrequency();
+    const vol = parseFloat(tinnitusVolumeSlider.value);
+
+    // Create single Oscillator
+    phaseOsc = audioCtx.createOscillator();
+    phaseOsc.type = 'sine';
+    phaseOsc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+    // Split signal: Left vs Right Gains
+    phaseGainLeft = audioCtx.createGain();
+    phaseGainRight = audioCtx.createGain();
+
+    // Volume level
+    phaseGainLeft.gain.setValueAtTime(vol, audioCtx.currentTime);
+    
+    // Right channel phase control (either in phase: 1.0 or inverted: -1.0)
+    const rightGainVal = currentPhaseAngle === 180 ? -vol : vol;
+    phaseGainRight.gain.setValueAtTime(rightGainVal, audioCtx.currentTime);
+
+    // Stereo Merger Node
+    phaseMerger = audioCtx.createChannelMerger(2);
+
+    // Connect Split Signal
+    phaseOsc.connect(phaseGainLeft);
+    phaseOsc.connect(phaseGainRight);
+
+    phaseGainLeft.connect(phaseMerger, 0, 0); // connect to Left channel input
+    phaseGainRight.connect(phaseMerger, 0, 1); // connect to Right channel input
+
+    // Connect to Master Output Analyser
+    phaseMerger.connect(analyser);
+
+    // Start tone
+    phaseOsc.start();
+    isPhaseExpPlaying = true;
+}
+
+function stopPhaseExperiment() {
+    if (!isPhaseExpPlaying) return;
+
+    try {
+        if (phaseOsc) {
+            phaseOsc.stop();
+            phaseOsc.disconnect();
+            phaseOsc = null;
+        }
+        if (phaseGainLeft) {
+            phaseGainLeft.disconnect();
+            phaseGainLeft = null;
+        }
+        if (phaseGainRight) {
+            phaseGainRight.disconnect();
+            phaseGainRight = null;
+        }
+        if (phaseMerger) {
+            phaseMerger.disconnect();
+            phaseMerger = null;
+        }
+    } catch(e){}
+    
+    isPhaseExpPlaying = false;
+}
+
+function updatePhaseAngle(angle) {
+    currentPhaseAngle = angle;
+    
+    if (angle === 180) {
+        btnPhaseNormal.classList.remove('active');
+        btnPhaseInverted.classList.add('active');
+        waveInvertedDiv.style.animationDirection = 'reverse';
+        waveRelationText.textContent = 'Las ondas colisionan en contra-fase (Interferencia Destructiva)';
+        waveRelationText.style.color = 'var(--color-cyan)';
+        
+        phaseEduText.innerHTML = `
+            <strong>En Desfase (180°):</strong> La onda derecha está completamente invertida. Si usas 
+            <strong>altavoces externos</strong>, notarás cómo el sonido disminuye considerablemente al alejarte o inclinarte, 
+            ya que las vibraciones de aire físico se anulan. Si usas <strong>auriculares</strong>, no hay mezcla en el aire, 
+            por lo que percibirás un efecto de vacío espacial. Al ser tu tinnitus subjetivo (neuronal), no colisionará con él.
+        `;
+
+        // Update active audio node directly
+        if (isPhaseExpPlaying && phaseGainRight) {
+            const vol = parseFloat(tinnitusVolumeSlider.value);
+            phaseGainRight.gain.setValueAtTime(-vol, audioCtx.currentTime);
+        }
+    } else {
+        btnPhaseNormal.classList.add('active');
+        btnPhaseInverted.classList.remove('active');
+        waveInvertedDiv.style.animationDirection = 'normal';
+        waveRelationText.textContent = 'Las ondas se suman (Interferencia Constructiva)';
+        waveRelationText.style.color = 'var(--color-text-muted)';
+        
+        phaseEduText.innerHTML = `
+            <strong>En Fase (0°):</strong> Ambos altavoces vibran coordinadamente en la misma dirección. 
+            Las ondas se suman acústicamente, duplicando la presión del aire física en el canal auditivo. 
+            El sonido se percibirá centrado y nítido, justo a medio camino entre ambos oídos.
+        `;
+
+        // Update active audio node directly
+        if (isPhaseExpPlaying && phaseGainRight) {
+            const vol = parseFloat(tinnitusVolumeSlider.value);
+            phaseGainRight.gain.setValueAtTime(vol, audioCtx.currentTime);
+        }
+    }
+}
+
+// ==========================================================================
+// 6. REAL-TIME CANVAS VISUALIZER
+// ==========================================================================
+
+function drawVisualizer() {
+    if (!audioCtx) return;
+
+    requestAnimationFrame(drawVisualizer);
+
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    analyser.getByteFrequencyData(dataArray);
+
+    canvasCtx.fillStyle = 'rgba(4, 7, 13, 0.4)';
+    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const barWidth = (canvas.width / bufferLength) * 1.5;
+    let barHeight;
+    let x = 0;
+
+    for (let i = 0; i < bufferLength; i++) {
+        barHeight = dataArray[i];
+
+        // Draw frequency bars with gradient
+        const percent = barHeight / 255;
+        const red = Math.round(162 - (156 * percent));
+        const green = Math.round(28 + (170 * percent));
+        const blue = Math.round(243 - (16 * percent));
+
+        canvasCtx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+        
+        // Dynamic round-topped bars
+        const h = percent * (canvas.height - 15);
+        canvasCtx.beginPath();
+        if (canvasCtx.roundRect) {
+            canvasCtx.roundRect(x, canvas.height - h, barWidth - 1, h, [3, 3, 0, 0]);
+        } else {
+            canvasCtx.rect(x, canvas.height - h, barWidth - 1, h);
+        }
+        canvasCtx.fill();
+
+        x += barWidth;
+    }
+
+    // Add a glowing digital line representation on top
+    analyser.getByteTimeDomainData(dataArray);
+    canvasCtx.lineWidth = 2;
+    canvasCtx.strokeStyle = 'rgba(6, 198, 227, 0.5)';
+    canvasCtx.beginPath();
+
+    const sliceWidth = canvas.width / bufferLength;
+    let xDomain = 0;
+
+    for (let i = 0; i < bufferLength; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = v * (canvas.height / 2);
+
+        if (i === 0) {
+            canvasCtx.moveTo(xDomain, y);
+        } else {
+            canvasCtx.lineTo(xDomain, y);
+        }
+
+        xDomain += sliceWidth;
+    }
+
+    canvasCtx.lineTo(canvas.width, canvas.height / 2);
+    canvasCtx.stroke();
+}
+
+// ==========================================================================
+// 7. EVENT BINDING & INTERFACE HANDLERS
+// ==========================================================================
+
+// Global Interaction Trigger
+btnStartAudio.addEventListener('click', () => {
+    ensureAudioCtx();
+});
+
+// Master Volume Handler
+masterVolumeSlider.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    masterVolumeVal.textContent = Math.round(val * 100) + '%';
+    if (masterGain) {
+        masterGain.gain.setValueAtTime(val, audioCtx.currentTime);
+    }
+});
+
+// Synthesizer Wave Selection
+waveTypeButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const button = e.currentTarget;
+        waveTypeButtons.forEach(b => b.classList.remove('active'));
+        button.classList.add('active');
+
+        activeWaveType = button.getAttribute('data-type');
+
+        // If playing, reset synthesis nodes on the fly to change sound source
+        if (isTinnitusPlaying) {
+            stopTinnitusSynthesizer();
+            startTinnitusSynthesizer();
+        }
+    });
+});
+
+// Frequency controls (Logarithmic Coarse)
+freqCoarseSlider.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    
+    // Display human readable format
+    if (val >= 1000) {
+        freqVal.textContent = (val / 1000).toFixed(2) + ' kHz';
+    } else {
+        freqVal.textContent = val + ' Hz';
+    }
+
+    updateSynthesizerParams();
+});
+
+// Fine Frequency tuning
+freqFineSlider.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    freqFineVal.textContent = (val > 0 ? '+' : '') + val + ' Hz';
+    
+    updateSynthesizerParams();
+});
+
+// Modulation Toggle
+modToggle.addEventListener('change', (e) => {
+    if (isTinnitusPlaying) {
+        if (e.target.checked) {
+            setupTremolo();
+        } else {
+            // Disconnect mod LFO and set gain back to default
+            if (tinnitusModLfo) {
+                tinnitusModLfo.stop();
+                tinnitusModLfo.disconnect();
+                tinnitusModLfo = null;
+            }
+            if (tinnitusModGain) {
+                tinnitusModGain.gain.setValueAtTime(1.0, audioCtx.currentTime);
+            }
+        }
+    }
+});
+
+modRateSlider.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    modRateVal.textContent = val.toFixed(1) + ' Hz';
+    if (isTinnitusPlaying && modToggle.checked) {
+        setupTremolo();
+    }
+});
+
+modDepthSlider.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    modDepthVal.textContent = val + '%';
+    if (isTinnitusPlaying && modToggle.checked) {
+        setupTremolo();
+    }
+});
+
+// Balance Panner Slider
+tinnitusBalanceSlider.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    
+    // Text output
+    if (val === -1) tinnitusBalanceVal.textContent = 'Solo Oído Izquierdo';
+    else if (val === 1) tinnitusBalanceVal.textContent = 'Solo Oído Derecho';
+    else if (val === 0) tinnitusBalanceVal.textContent = 'Centrado';
+    else if (val < 0) tinnitusBalanceVal.textContent = `Izquierda (${Math.round(Math.abs(val)*100)}%)`;
+    else tinnitusBalanceVal.textContent = `Derecha (${Math.round(val*100)}%)`;
+
+    if (isTinnitusPlaying && tinnitusPanner) {
+        if (tinnitusPanner.pan) {
+            tinnitusPanner.pan.setValueAtTime(val, audioCtx.currentTime);
+        } else {
+            tinnitusPanner.setPosition(val, 0, 1 - Math.abs(val));
+        }
+    }
+});
+
+// Synthesizer Volume slider
+tinnitusVolumeSlider.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    tinnitusVolumeVal.textContent = Math.round(val * 100) + '%';
+    
+    if (isTinnitusPlaying && tinnitusVolumeNode) {
+        tinnitusVolumeNode.gain.setValueAtTime(val, audioCtx.currentTime);
+    }
+    
+    if (isPhaseExpPlaying) {
+        // Update phase volumes as well
+        if (phaseGainLeft) phaseGainLeft.gain.setValueAtTime(val, audioCtx.currentTime);
+        if (phaseGainRight) {
+            const rightVal = currentPhaseAngle === 180 ? -val : val;
+            phaseGainRight.gain.setValueAtTime(rightVal, audioCtx.currentTime);
+        }
+    }
+});
+
+// Play button trigger for matching synth
+btnPlaySynthesizer.addEventListener('click', () => {
+    ensureAudioCtx().then(() => {
+        if (isTinnitusPlaying) {
+            stopTinnitusSynthesizer(true);
+        } else {
+            startTinnitusSynthesizer();
+        }
+    });
+});
+
+// NOTCH FILTER TOGGLE
+notchToggle.addEventListener('change', (e) => {
+    isNotchActive = e.target.checked;
+    updateNotchFilterState();
+});
+
+// SOUNDSCAPE MIXERS HANDLERS
+const handleAmbientChange = (slider, display, gainNode) => {
+    slider.addEventListener('input', (e) => {
+        ensureAudioCtx().then(() => {
+            const val = parseFloat(e.target.value);
+            display.textContent = Math.round(val * 100) + '%';
+            if (gainNode) {
+                // smooth transition to avoid clicks
+                gainNode.gain.setValueAtTime(gainNode.gain.value, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(val * 0.5, audioCtx.currentTime + 0.1); // scaling down slightly
+            }
+        });
+    });
+};
+
+handleAmbientChange(volRainSlider, volRainVal, soundscapes.rain.gain);
+handleAmbientChange(volOceanSlider, volOceanVal, soundscapes.ocean.gain);
+handleAmbientChange(volWindSlider, volWindVal, soundscapes.wind.gain);
+
+// Masking clinical generators
+btnMaskWhite.addEventListener('click', () => playMaskerNoise('white'));
+btnMaskPink.addEventListener('click', () => playMaskerNoise('pink'));
+btnMaskBrown.addEventListener('click', () => playMaskerNoise('brown'));
+
+maskVolumeSlider.addEventListener('input', (e) => {
+    ensureAudioCtx().then(() => {
+        const val = parseFloat(e.target.value);
+        maskVolumeVal.textContent = Math.round(val * 100) + '%';
+        if (maskerGain && activeMaskerType) {
+            maskerGain.gain.setValueAtTime(maskerGain.gain.value, audioCtx.currentTime);
+            maskerGain.gain.linearRampToValueAtTime(val, audioCtx.currentTime + 0.15);
+        }
+    });
+});
+
+btnStopTherapy.addEventListener('click', () => {
+    stopAllTherapy();
+});
+
+// RESIDUAL INHIBITION HANDLERS
+riPresetButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        if (isRiRunning) return; // ignore during run
+        
+        riPresetButtons.forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+
+        riTotalTime = parseInt(e.currentTarget.getAttribute('data-time'));
+        riTimerVal.textContent = riTotalTime + 's';
+    });
+});
+
+btnStartRI.addEventListener('click', () => {
+    startResidualInhibition();
+});
+
+// PHASE EXPERIMENT HANDLERS
+btnPhaseNormal.addEventListener('click', () => {
+    ensureAudioCtx().then(() => {
+        updatePhaseAngle(0);
+        if (!isPhaseExpPlaying) {
+            startPhaseExperiment();
+        }
+    });
+});
+
+btnPhaseInverted.addEventListener('click', () => {
+    ensureAudioCtx().then(() => {
+        updatePhaseAngle(180);
+        if (!isPhaseExpPlaying) {
+            startPhaseExperiment();
+        }
+    });
+});
+
