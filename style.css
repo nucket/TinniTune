@@ -150,13 +150,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    font-size: 1.4rem;
     box-shadow: 0 4px 15px rgba(162, 28, 243, 0.4);
-}
-
-.logo-icon svg {
-    width: 24px;
-    height: 24px;
 }
 
 .brand-text h1 {
