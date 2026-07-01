@@ -93,6 +93,24 @@ Browsers restrict some Web Audio features and buffer loads when running directly
 
 ---
 
+## 🌐 Deployment
+
+This is a fully static web application and can be hosted on any modern static hosting provider.
+
+### Deploying to Cloudflare Pages
+1. **Connect Repository**: Connect your GitHub repository to Cloudflare Pages via the Cloudflare Dashboard.
+2. **Build Configuration**: Since this is a vanilla HTML/JS project, configure the build settings as follows:
+   - **Framework preset**: `None`
+   - **Build command**: Leave empty (no build step required)
+   - **Build output directory**: `/` (root directory)
+3. **Deploy**: Click **Save and Deploy**.
+4. **Custom Domain**:
+   - Go to your Page's project settings -> **Custom domains** -> **Set up a custom domain**.
+   - Enter your desired subdomain (e.g., `tinnitune.naudycastellanos.com`).
+   - If your domain `naudycastellanos.com` is managed by Cloudflare DNS, Cloudflare will automatically set up the CNAME record for you. If managed externally, add the provided CNAME record in your DNS registrar.
+
+---
+
 ## 📄 Project Files
 *   **`index.html`**: Semantic page structure, SVG icons, visualizer canvas, and panels.
 *   **`style.css`**: Vanilla CSS styling featuring CSS variables, glassmorphic elements, and a responsive grid.
@@ -105,3 +123,9 @@ Browsers restrict some Web Audio features and buffer loads when running directly
 ## ⚠️ Medical Disclaimer
 
 This application is an educational sound exploration and therapeutic support tool. It is not a medical device, does not provide diagnostics, and does not replace the advice, diagnosis, or treatment of a health professional or audiologist. Use headphones at safe volumes to avoid further hearing damage.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](file:///n:/Person/Project/024-Tinning/Test001/LICENSE) file for details.
