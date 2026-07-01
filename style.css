@@ -1374,3 +1374,37 @@ input:checked + .slider-round:before {
     text-decoration: underline;
 }
 
+/* Binaural & Modulation Button Selector Subtitle Styles */
+.btn-select-small:has(small) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.45rem 0.3rem;
+}
+
+.btn-select-small small {
+    font-size: 0.6rem;
+    color: var(--color-text-dim);
+    font-weight: normal;
+    margin-top: 0.1rem;
+    display: block;
+}
+
+.btn-select-small.active small {
+    color: var(--color-cyan);
+}
+
+/* Specific active purple small state for tuner modulation type button */
+#btnModTremolo.active small, #btnModAsr.active small {
+    color: var(--color-purple);
+}
+
+#btnModTremolo.active, #btnModAsr.active {
+    background: rgba(162, 28, 243, 0.08);
+    border-color: var(--color-purple);
+    color: var(--color-text);
+    box-shadow: 0 0 8px rgba(162, 28, 243, 0.1);
+}
+
+

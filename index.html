@@ -123,13 +123,21 @@
                     </div>
                     <div class="expand-content" id="modControls">
                         <div class="control-header sub-header">
-                            <label for="modRate">Rate (Oscillation frequency)</label>
+                            <label>Modulation Type</label>
+                        </div>
+                        <div class="btn-grid" style="grid-template-columns: repeat(2, 1fr); gap: 0.4rem; margin-bottom: 0.4rem;">
+                            <button class="btn-select-small active" id="btnModTremolo" type="button">Tremolo<small>Sine Wave</small></button>
+                            <button class="btn-select-small" id="btnModAsr" type="button">ASR Mode<small>Coordinated Reset</small></button>
+                        </div>
+
+                        <div class="control-header sub-header">
+                            <label for="modRate" id="modRateLabel">Rate (Oscillation frequency)</label>
                             <span class="control-value" id="modRateVal">4.0 Hz</span>
                         </div>
                         <input type="range" id="modRate" min="0.5" max="20" step="0.1" value="4" class="slider-neon">
 
                         <div class="control-header sub-header">
-                            <label for="modDepth">Depth (Severity of pulsation)</label>
+                            <label for="modDepth" id="modDepthLabel">Depth (Severity of pulsation)</label>
                             <span class="control-value" id="modDepthVal">40%</span>
                         </div>
                         <input type="range" id="modDepth" min="0" max="100" step="1" value="40" class="slider-neon">
@@ -268,6 +276,35 @@
                             <span class="control-value" id="maskVolumeVal">0%</span>
                         </div>
                         <input type="range" id="maskVolume" min="0" max="1" step="0.01" value="0" class="slider-neon accent-cyan">
+                    </div>
+                </div>
+
+                <!-- Binaural Beats -->
+                <div class="notch-toggle-card" id="binauralBeatsCard">
+                    <div class="notch-top">
+                        <div class="notch-info">
+                            <h4>Binaural Beats</h4>
+                            <p>Plays offset frequencies in each ear to stimulate relaxation brainwaves.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="binauralToggle">
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="binaural-controls" id="binauralControls" style="display: none; flex-direction: column; gap: 0.8rem; margin-top: 0.4rem;">
+                        <div class="btn-grid" style="grid-template-columns: repeat(2, 1fr); gap: 0.4rem;">
+                            <button class="btn-select-small active" id="btnBinauralDelta" data-beat="2" type="button">Delta<small>2 Hz (Deep Sleep)</small></button>
+                            <button class="btn-select-small" id="btnBinauralTheta" data-beat="6" type="button">Theta<small>6 Hz (Meditation)</small></button>
+                            <button class="btn-select-small" id="btnBinauralAlpha" data-beat="10" type="button">Alpha<small>10 Hz (Relaxation)</small></button>
+                            <button class="btn-select-small" id="btnBinauralBeta" data-beat="20" type="button">Beta<small>20 Hz (Focus)</small></button>
+                        </div>
+                        
+                        <div class="control-header sub-header" style="margin-top: 0.4rem;">
+                            <label for="binauralVolume">Beats Volume</label>
+                            <span class="control-value" id="binauralVolumeVal">40%</span>
+                        </div>
+                        <input type="range" id="binauralVolume" min="0" max="1" step="0.01" value="0.4" class="slider-neon accent-cyan">
                     </div>
                 </div>
 

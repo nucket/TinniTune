@@ -55,6 +55,20 @@ let riTimeRemaining = 0;
 let riTotalTime = 60; // default 60s
 let isRiRunning = false;
 
+// Binaural Beats Node References
+let binauralOscLeft = null;
+let binauralOscRight = null;
+let binauralPanLeft = null;
+let binauralPanRight = null;
+let binauralVolumeNode = null;
+let isBinauralPlaying = false;
+let activeBinauralBeat = 10; // default 10Hz (Alpha)
+
+// ASR Modulation State
+let activeModulationType = 'tremolo'; // 'tremolo' or 'asr'
+let asrIntervalId = null;
+let originalTinnitusFreq = null;
+
 // DOM Elements
 const btnStartAudio = document.getElementById('btnStartAudio');
 const audioStatus = document.getElementById('audioStatus');
@@ -111,6 +125,21 @@ const waveNormalDiv = document.getElementById('waveNormal');
 const waveInvertedDiv = document.getElementById('waveInverted');
 const waveRelationText = document.getElementById('waveRelationText');
 const phaseEduText = document.getElementById('phaseEduText');
+
+// Binaural Beats DOM
+const binauralToggle = document.getElementById('binauralToggle');
+const binauralControls = document.getElementById('binauralControls');
+const binauralVolumeSlider = document.getElementById('binauralVolume');
+const binauralVolumeVal = document.getElementById('binauralVolumeVal');
+const btnBinauralDelta = document.getElementById('btnBinauralDelta');
+const btnBinauralTheta = document.getElementById('btnBinauralTheta');
+const btnBinauralAlpha = document.getElementById('btnBinauralAlpha');
+const btnBinauralBeta = document.getElementById('btnBinauralBeta');
+const binauralBeatButtons = [btnBinauralDelta, btnBinauralTheta, btnBinauralAlpha, btnBinauralBeta];
+
+// Modulation Mode DOM
+const btnModTremolo = document.getElementById('btnModTremolo');
+const btnModAsr = document.getElementById('btnModAsr');
 
 // Canvas Visualizer DOM
 const canvas = document.getElementById('visualizerCanvas');
@@ -351,6 +380,10 @@ function stopTinnitusSynthesizer(fadeOut = false) {
                 tinnitusModLfo.disconnect();
                 tinnitusModLfo = null;
             }
+            if (asrIntervalId) {
+                clearInterval(asrIntervalId);
+                asrIntervalId = null;
+            }
             if (tinnitusModGain) {
                 tinnitusModGain.disconnect();
                 tinnitusModGain = null;
@@ -388,13 +421,13 @@ function stopTinnitusSynthesizer(fadeOut = false) {
     }
 }
 
-// Configures and connects the trémolo LFO modulator
+// Configures and connects the trémolo LFO modulator or ASR scheduler
 function setupTremolo() {
     if (!audioCtx || !tinnitusModGain) return;
 
-    // Disconnect old LFO if it exists
+    // Disconnect old LFO/timers if they exist
     if (tinnitusModLfo) {
-        tinnitusModLfo.stop();
+        try { tinnitusModLfo.stop(); } catch(e){}
         tinnitusModLfo.disconnect();
         tinnitusModLfo = null;
     }
@@ -402,27 +435,75 @@ function setupTremolo() {
         tinnitusModLfoGain.disconnect();
         tinnitusModLfoGain = null;
     }
+    if (asrIntervalId) {
+        clearInterval(asrIntervalId);
+        asrIntervalId = null;
+    }
 
     const rate = parseFloat(modRateSlider.value);
     const depth = parseFloat(modDepthSlider.value) / 100.0; // 0.0 to 1.0
 
-    // Mod LFO Node (Sine wave LFO)
-    tinnitusModLfo = audioCtx.createOscillator();
-    tinnitusModLfo.type = 'sine';
-    tinnitusModLfo.frequency.setValueAtTime(rate, audioCtx.currentTime);
+    if (activeModulationType === 'tremolo') {
+        // Restore standard frequency of active nodes in case they were modified by ASR
+        updateSynthesizerParams();
 
-    // LFO Gain determines the amplitude of volume swings
-    tinnitusModLfoGain = audioCtx.createGain();
-    tinnitusModLfoGain.gain.setValueAtTime(depth * 0.5, audioCtx.currentTime);
+        // Mod LFO Node (Sine wave LFO)
+        tinnitusModLfo = audioCtx.createOscillator();
+        tinnitusModLfo.type = 'sine';
+        tinnitusModLfo.frequency.setValueAtTime(rate, audioCtx.currentTime);
 
-    // Offset the main modulator gain value to remain balanced
-    tinnitusModGain.gain.setValueAtTime(1.0 - (depth * 0.5), audioCtx.currentTime);
+        // LFO Gain determines the amplitude of volume swings
+        tinnitusModLfoGain = audioCtx.createGain();
+        tinnitusModLfoGain.gain.setValueAtTime(depth * 0.5, audioCtx.currentTime);
 
-    // Connections
-    tinnitusModLfo.connect(tinnitusModLfoGain);
-    tinnitusModLfoGain.connect(tinnitusModGain.gain); // Modulate target parameter
+        // Offset the main modulator gain value to remain balanced
+        tinnitusModGain.gain.setValueAtTime(1.0 - (depth * 0.5), audioCtx.currentTime);
 
-    tinnitusModLfo.start();
+        // Connections
+        tinnitusModLfo.connect(tinnitusModLfoGain);
+        tinnitusModLfoGain.connect(tinnitusModGain.gain); // Modulate target parameter
+
+        tinnitusModLfo.start();
+    } else if (activeModulationType === 'asr') {
+        // ASR mode: Rhythmic / pseudo-random reset
+        tinnitusModGain.gain.setValueAtTime(1.0, audioCtx.currentTime);
+        
+        // Interval function to dynamically alter frequency and volume
+        const runAsrTick = () => {
+            if (!isTinnitusPlaying) {
+                if (asrIntervalId) {
+                    clearInterval(asrIntervalId);
+                    asrIntervalId = null;
+                }
+                return;
+            }
+
+            const baseFreq = getCombinedFrequency();
+            // Maximum deviation is 8% at depth 1.0 (100%)
+            const maxDev = baseFreq * 0.08 * depth;
+            const randomDev = (Math.random() * 2 - 1) * maxDev;
+            const targetFreq = Math.max(20, Math.min(20000, baseFreq + randomDev));
+
+            // Frequency change
+            if (tinnitusOsc) {
+                tinnitusOsc.frequency.setValueAtTime(targetFreq, audioCtx.currentTime);
+            }
+            if (tinnitusFilter) {
+                tinnitusFilter.frequency.setValueAtTime(targetFreq, audioCtx.currentTime);
+            }
+
+            // Volume burst (amplitude modulation)
+            // 40% chance of dip in volume to create burst structure
+            const targetGain = Math.random() > 0.4 ? 1.0 : Math.max(0.001, 1.0 - depth);
+            tinnitusModGain.gain.linearRampToValueAtTime(targetGain, audioCtx.currentTime + (0.15 / rate));
+        };
+
+        // Run immediately
+        runAsrTick();
+        
+        // Set up scheduler
+        asrIntervalId = setInterval(runAsrTick, 1000 / rate);
+    }
 }
 
 // Update active synthesiser parameters dynamically
@@ -642,6 +723,13 @@ function stopAllTherapy() {
     stopMaskerNoise();
     maskVolumeSlider.value = 0;
     maskVolumeVal.textContent = '0%';
+
+    // Stop Binaural Beats if active
+    if (binauralToggle.checked) {
+        binauralToggle.checked = false;
+        binauralControls.style.display = 'none';
+        stopBinauralBeats();
+    }
 }
 
 // ==========================================================================
@@ -1132,6 +1220,154 @@ btnPhaseInverted.addEventListener('click', () => {
 });
 
 // ==========================================================================
+// BINAURAL BEATS MODULE
+// ==========================================================================
+function startBinauralBeats() {
+    if (isBinauralPlaying) return;
+    if (!audioCtx) return;
+
+    const carrier = 200; // Base carrier frequency 200Hz
+    const beat = activeBinauralBeat;
+    const vol = parseFloat(binauralVolumeSlider.value);
+
+    // Create Gain Node
+    binauralVolumeNode = audioCtx.createGain();
+    binauralVolumeNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+
+    // Left Channel: Carrier Frequency
+    binauralOscLeft = audioCtx.createOscillator();
+    binauralOscLeft.type = 'sine';
+    binauralOscLeft.frequency.setValueAtTime(carrier, audioCtx.currentTime);
+
+    binauralPanLeft = audioCtx.createStereoPanner();
+    binauralPanLeft.pan.setValueAtTime(-1.0, audioCtx.currentTime);
+
+    // Right Channel: Carrier + Beat Frequency
+    binauralOscRight = audioCtx.createOscillator();
+    binauralOscRight.type = 'sine';
+    binauralOscRight.frequency.setValueAtTime(carrier + beat, audioCtx.currentTime);
+
+    binauralPanRight = audioCtx.createStereoPanner();
+    binauralPanRight.pan.setValueAtTime(1.0, audioCtx.currentTime);
+
+    // Connections
+    binauralOscLeft.connect(binauralPanLeft);
+    binauralPanLeft.connect(binauralVolumeNode);
+
+    binauralOscRight.connect(binauralPanRight);
+    binauralPanRight.connect(binauralVolumeNode);
+
+    // Route to master output (analyser)
+    binauralVolumeNode.connect(analyser);
+
+    // Start oscillators
+    binauralOscLeft.start();
+    binauralOscRight.start();
+
+    isBinauralPlaying = true;
+}
+
+function stopBinauralBeats() {
+    if (!isBinauralPlaying) return;
+
+    try {
+        if (binauralOscLeft) {
+            binauralOscLeft.stop();
+            binauralOscLeft.disconnect();
+            binauralOscLeft = null;
+        }
+        if (binauralOscRight) {
+            binauralOscRight.stop();
+            binauralOscRight.disconnect();
+            binauralOscRight = null;
+        }
+        if (binauralPanLeft) {
+            binauralPanLeft.disconnect();
+            binauralPanLeft = null;
+        }
+        if (binauralPanRight) {
+            binauralPanRight.disconnect();
+            binauralPanRight = null;
+        }
+        if (binauralVolumeNode) {
+            binauralVolumeNode.disconnect();
+            binauralVolumeNode = null;
+        }
+    } catch (e) {
+        console.warn('Error stopping binaural beats nodes:', e);
+    }
+
+    isBinauralPlaying = false;
+}
+
+function updateBinauralBeatFrequency() {
+    if (isBinauralPlaying && binauralOscRight) {
+        const carrier = 200;
+        binauralOscRight.frequency.setValueAtTime(carrier + activeBinauralBeat, audioCtx.currentTime);
+    }
+}
+
+function updateBinauralVolume() {
+    const vol = parseFloat(binauralVolumeSlider.value);
+    binauralVolumeVal.textContent = Math.round(vol * 100) + '%';
+    if (isBinauralPlaying && binauralVolumeNode) {
+        binauralVolumeNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+    }
+}
+
+// BINAURAL BEATS EVENT HANDLERS
+binauralToggle.addEventListener('change', (e) => {
+    if (e.target.checked) {
+        ensureAudioCtx().then(() => {
+            binauralControls.style.display = 'flex';
+            startBinauralBeats();
+        });
+    } else {
+        binauralControls.style.display = 'none';
+        stopBinauralBeats();
+    }
+});
+
+binauralVolumeSlider.addEventListener('input', () => {
+    updateBinauralVolume();
+});
+
+binauralBeatButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        binauralBeatButtons.forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        activeBinauralBeat = parseInt(e.currentTarget.getAttribute('data-beat'));
+        updateBinauralBeatFrequency();
+    });
+});
+
+// MODULATION TYPE EVENT HANDLERS
+btnModTremolo.addEventListener('click', () => {
+    if (activeModulationType === 'tremolo') return;
+    btnModTremolo.classList.add('active');
+    btnModAsr.classList.remove('remove'); // safety
+    btnModAsr.classList.remove('active');
+    activeModulationType = 'tremolo';
+    document.getElementById('modRateLabel').textContent = 'Rate (Oscillation frequency)';
+    document.getElementById('modDepthLabel').textContent = 'Depth (Severity of pulsation)';
+    if (isTinnitusPlaying && modToggle.checked) {
+        setupTremolo();
+    }
+});
+
+btnModAsr.addEventListener('click', () => {
+    if (activeModulationType === 'asr') return;
+    btnModAsr.classList.add('active');
+    btnModTremolo.classList.remove('active');
+    activeModulationType = 'asr';
+    document.getElementById('modRateLabel').textContent = 'Reset Pace (Fluctuation speed)';
+    document.getElementById('modDepthLabel').textContent = 'Drift Range (Severity of drift)';
+    if (isTinnitusPlaying && modToggle.checked) {
+        setupTremolo();
+    }
+});
+
+// ==========================================================================
 // 8. PRESET MANAGER SYSTEM
 // ==========================================================================
 
@@ -1251,7 +1487,11 @@ function saveCurrentPreset() {
         volWind: volWindSlider.value,
         maskVolume: maskVolumeSlider.value,
         activeMaskerType: activeMaskerType,
-        isNotchActive: isNotchActive
+        isNotchActive: isNotchActive,
+        activeModulationType: activeModulationType,
+        binauralEnabled: binauralToggle.checked,
+        binauralVolume: binauralVolumeSlider.value,
+        activeBinauralBeat: activeBinauralBeat
     };
 
     const presets = getPresets();
@@ -1272,6 +1512,7 @@ function loadPreset(id) {
     activeWaveType = preset.waveType;
     isNotchActive = preset.isNotchActive;
     activeMaskerType = preset.activeMaskerType;
+    activeModulationType = preset.activeModulationType || 'tremolo';
 
     // Update UI elements values
     freqCoarseSlider.value = preset.freqCoarse;
@@ -1286,6 +1527,24 @@ function loadPreset(id) {
     volWindSlider.value = preset.volWind;
     maskVolumeSlider.value = preset.maskVolume;
     notchToggle.checked = preset.isNotchActive;
+    
+    // Modulation Type UI
+    btnModTremolo.classList.toggle('active', activeModulationType === 'tremolo');
+    btnModAsr.classList.toggle('active', activeModulationType === 'asr');
+    document.getElementById('modRateLabel').textContent = activeModulationType === 'tremolo' ? 'Rate (Oscillation frequency)' : 'Reset Pace (Fluctuation speed)';
+    document.getElementById('modDepthLabel').textContent = activeModulationType === 'tremolo' ? 'Depth (Severity of pulsation)' : 'Drift Range (Severity of drift)';
+
+    // Binaural Beats UI
+    const bEnabled = preset.binauralEnabled || false;
+    binauralToggle.checked = bEnabled;
+    binauralVolumeSlider.value = preset.binauralVolume !== undefined ? preset.binauralVolume : 0.4;
+    binauralVolumeVal.textContent = Math.round(parseFloat(binauralVolumeSlider.value) * 100) + '%';
+    activeBinauralBeat = preset.activeBinauralBeat || 10;
+    
+    binauralControls.style.display = bEnabled ? 'flex' : 'none';
+    binauralBeatButtons.forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.getAttribute('data-beat')) === activeBinauralBeat);
+    });
 
     // Update active wave button UI
     waveTypeButtons.forEach(btn => {
@@ -1385,6 +1644,14 @@ function loadPreset(id) {
             }
         } else {
             stopMaskerNoise();
+        }
+
+        // Apply Binaural Beats state dynamically
+        if (bEnabled) {
+            stopBinauralBeats();
+            startBinauralBeats();
+        } else {
+            stopBinauralBeats();
         }
     }
 }
@@ -1493,6 +1760,13 @@ function stopSleepTimerLogic(finished = false) {
         stopTinnitusSynthesizer(false);
         stopAllTherapy();
         stopPhaseExperiment();
+        
+        // Stop Binaural Beats
+        if (binauralToggle.checked) {
+            binauralToggle.checked = false;
+            binauralControls.style.display = 'none';
+            stopBinauralBeats();
+        }
         
         masterVolumeSlider.value = originalMasterVolume;
         masterVolumeVal.textContent = Math.round(originalMasterVolume * 100) + '%';
