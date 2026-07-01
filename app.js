@@ -1387,17 +1387,10 @@ btnModAsr.addEventListener('click', () => {
 // LOCAL MUSIC PLAYER MODULE
 // ==========================================================================
 function initLocalAudio(file) {
-    if (!audioCtx) return;
-
     if (!localAudioElement) {
         // Create audio element programmatically
         localAudioElement = new Audio();
         localAudioElement.loop = true;
-
-        // Wrap it in a Web Audio media element source node
-        localAudioSource = audioCtx.createMediaElementSource(localAudioElement);
-        // Connect to the Notch Filter chain
-        localAudioSource.connect(therapyNotchFilter);
 
         // Bind playback events
         localAudioElement.addEventListener('timeupdate', () => {
@@ -1423,6 +1416,12 @@ function initLocalAudio(file) {
         });
     }
 
+    // Connect to Web Audio API ONLY if audioCtx already exists and source isn't connected yet
+    if (audioCtx && !localAudioSource) {
+        localAudioSource = audioCtx.createMediaElementSource(localAudioElement);
+        localAudioSource.connect(therapyNotchFilter);
+    }
+
     // Set source to loaded file URL
     const fileUrl = URL.createObjectURL(file);
     localAudioElement.src = fileUrl;
@@ -1439,11 +1438,20 @@ function initLocalAudio(file) {
 function toggleLocalAudioPlay() {
     if (!localAudioElement) return;
 
-    if (localAudioElement.paused) {
-        localAudioElement.play().catch(e => console.error("Error playing local audio:", e));
-    } else {
-        localAudioElement.pause();
-    }
+    // Ensure Audio Context is running upon user click (direct user gesture)
+    ensureAudioCtx().then(() => {
+        // Connect the node if not connected yet
+        if (audioCtx && !localAudioSource) {
+            localAudioSource = audioCtx.createMediaElementSource(localAudioElement);
+            localAudioSource.connect(therapyNotchFilter);
+        }
+
+        if (localAudioElement.paused) {
+            localAudioElement.play().catch(e => console.error("Error playing local audio:", e));
+        } else {
+            localAudioElement.pause();
+        }
+    });
 }
 
 function pauseLocalAudio() {
