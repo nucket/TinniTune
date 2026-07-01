@@ -34,6 +34,10 @@ let soundscapes = {
 let therapyNotchFilter = null; // Filter to cut out tinnitus frequency
 let isNotchActive = false;
 
+// Local Audio references
+let localAudioElement = null;
+let localAudioSource = null;
+
 // Sound Buffers (Generated once at audio initialization)
 let buffers = {
     white: null,
@@ -112,6 +116,15 @@ const btnMaskBrown = document.getElementById('btnMaskBrown');
 const maskVolumeSlider = document.getElementById('maskVolume');
 const maskVolumeVal = document.getElementById('maskVolumeVal');
 const btnStopTherapy = document.getElementById('btnStopTherapy');
+
+// Local Music Player DOM
+const localAudioFile = document.getElementById('localAudioFile');
+const fileNameLabel = document.getElementById('fileNameLabel');
+const playerControlsRow = document.getElementById('playerControlsRow');
+const btnPlayLocalAudio = document.getElementById('btnPlayLocalAudio');
+const localAudioProgress = document.getElementById('localAudioProgress');
+const playerCurrentTime = document.getElementById('playerCurrentTime');
+const playerTotalTime = document.getElementById('playerTotalTime');
 
 // RI & Phase DOM
 const riProgressCircle = document.getElementById('riProgressCircle');
@@ -730,6 +743,9 @@ function stopAllTherapy() {
         binauralControls.style.display = 'none';
         stopBinauralBeats();
     }
+
+    // Pause Local Audio if it exists and is playing
+    pauseLocalAudio();
 }
 
 // ==========================================================================
@@ -1368,6 +1384,106 @@ btnModAsr.addEventListener('click', () => {
 });
 
 // ==========================================================================
+// LOCAL MUSIC PLAYER MODULE
+// ==========================================================================
+function initLocalAudio(file) {
+    if (!audioCtx) return;
+
+    if (!localAudioElement) {
+        // Create audio element programmatically
+        localAudioElement = new Audio();
+        localAudioElement.loop = true;
+
+        // Wrap it in a Web Audio media element source node
+        localAudioSource = audioCtx.createMediaElementSource(localAudioElement);
+        // Connect to the Notch Filter chain
+        localAudioSource.connect(therapyNotchFilter);
+
+        // Bind playback events
+        localAudioElement.addEventListener('timeupdate', () => {
+            if (!localAudioElement || isNaN(localAudioElement.duration)) return;
+            const progress = (localAudioElement.currentTime / localAudioElement.duration) * 100;
+            localAudioProgress.value = progress;
+            playerCurrentTime.textContent = formatTime(localAudioElement.currentTime);
+        });
+
+        localAudioElement.addEventListener('loadedmetadata', () => {
+            playerTotalTime.textContent = formatTime(localAudioElement.duration);
+            localAudioProgress.value = 0;
+        });
+
+        localAudioElement.addEventListener('play', () => {
+            btnPlayLocalAudio.innerHTML = `<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+            btnPlayLocalAudio.classList.add('active');
+        });
+
+        localAudioElement.addEventListener('pause', () => {
+            btnPlayLocalAudio.innerHTML = `<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>`;
+            btnPlayLocalAudio.classList.remove('active');
+        });
+    }
+
+    // Set source to loaded file URL
+    const fileUrl = URL.createObjectURL(file);
+    localAudioElement.src = fileUrl;
+    localAudioElement.load();
+    
+    // Reset controls UI
+    fileNameLabel.textContent = file.name;
+    playerControlsRow.style.display = 'flex';
+    playerCurrentTime.textContent = '0:00';
+    playerTotalTime.textContent = '0:00';
+    localAudioProgress.value = 0;
+}
+
+function toggleLocalAudioPlay() {
+    if (!localAudioElement) return;
+
+    if (localAudioElement.paused) {
+        localAudioElement.play().catch(e => console.error("Error playing local audio:", e));
+    } else {
+        localAudioElement.pause();
+    }
+}
+
+function pauseLocalAudio() {
+    if (localAudioElement && !localAudioElement.paused) {
+        localAudioElement.pause();
+        btnPlayLocalAudio.innerHTML = `<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>`;
+        btnPlayLocalAudio.classList.remove('active');
+    }
+}
+
+function formatTime(seconds) {
+    if (isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// LOCAL MUSIC PLAYER EVENT HANDLERS
+localAudioFile.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        ensureAudioCtx().then(() => {
+            initLocalAudio(file);
+        });
+    }
+});
+
+btnPlayLocalAudio.addEventListener('click', () => {
+    ensureAudioCtx().then(() => {
+        toggleLocalAudioPlay();
+    });
+});
+
+localAudioProgress.addEventListener('input', (e) => {
+    if (!localAudioElement || isNaN(localAudioElement.duration)) return;
+    const pct = parseFloat(e.target.value) / 100;
+    localAudioElement.currentTime = pct * localAudioElement.duration;
+});
+
+// ==========================================================================
 // 8. PRESET MANAGER SYSTEM
 // ==========================================================================
 
@@ -1767,6 +1883,9 @@ function stopSleepTimerLogic(finished = false) {
             binauralControls.style.display = 'none';
             stopBinauralBeats();
         }
+
+        // Pause local music player
+        pauseLocalAudio();
         
         masterVolumeSlider.value = originalMasterVolume;
         masterVolumeVal.textContent = Math.round(originalMasterVolume * 100) + '%';

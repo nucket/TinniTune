@@ -279,6 +279,36 @@
                     </div>
                 </div>
 
+                <!-- Local Music Player -->
+                <div class="control-group" id="localMusicGroup">
+                    <label class="group-title">Custom Music Player</label>
+                    <div class="music-player-card">
+                        <!-- Styled upload button -->
+                        <div class="file-upload-wrapper">
+                            <label for="localAudioFile" class="btn-secondary file-upload-label">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                                <span id="fileNameLabel">Load Local Audio File</span>
+                            </label>
+                            <input type="file" id="localAudioFile" accept="audio/*">
+                        </div>
+
+                        <!-- Player controls (shown when a file is loaded) -->
+                        <div class="player-controls-row" id="playerControlsRow" style="display: none;">
+                            <button id="btnPlayLocalAudio" class="btn-select-small" type="button">
+                                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
+                            </button>
+                            
+                            <div class="player-progress-container">
+                                <div class="player-time-info">
+                                    <span id="playerCurrentTime">0:00</span>
+                                    <span id="playerTotalTime">0:00</span>
+                                </div>
+                                <input type="range" id="localAudioProgress" min="0" max="100" value="0" class="slider-neon accent-cyan">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Binaural Beats -->
                 <div class="notch-toggle-card" id="binauralBeatsCard">
                     <div class="notch-top">

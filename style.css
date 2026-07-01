@@ -1407,4 +1407,81 @@ input:checked + .slider-round:before {
     box-shadow: 0 0 8px rgba(162, 28, 243, 0.1);
 }
 
+/* Local Music Player Card Styles */
+.music-player-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-top: 0.2rem;
+}
+
+.file-upload-wrapper input[type="file"] {
+    display: none;
+}
+
+.file-upload-label {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    border: 2px dashed rgba(6, 198, 227, 0.25) !important;
+    background: rgba(6, 198, 227, 0.02) !important;
+    border-radius: 12px;
+    padding: 0.8rem 1.2rem;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    width: 100%;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.file-upload-label:hover {
+    border-color: var(--color-cyan) !important;
+    background: rgba(6, 198, 227, 0.05) !important;
+    color: var(--color-text);
+    box-shadow: 0 0 10px rgba(6, 198, 227, 0.1);
+}
+
+.player-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    padding: 0.6rem 0.8rem;
+    animation: fadeInPlayer 0.3s ease-out;
+}
+
+@keyframes fadeInPlayer {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.player-progress-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.player-time-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: var(--color-text-dim);
+    font-family: monospace;
+}
+
+#localAudioProgress {
+    height: 4px;
+    margin: 0.2rem 0;
+}
+
+
 
