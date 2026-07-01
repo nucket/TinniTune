@@ -1,5 +1,7 @@
 # Tinnitune — Tinnitus Synthesizer & Acoustic Therapy
 
+> 🔗 **Live Demo:** [tinnitune.naudycastellanos.com](https://tinnitune.naudycastellanos.com)
+
 Tinnitune is an interactive web-based tool designed for sound exploration, tinnitus frequency mapping, and custom masking sound therapy. Built natively using **HTML5, CSS3, Vanilla JavaScript, and the Web Audio API**, it delivers a seamless, zero-dependency audio experience with a premium, glassmorphic dark mode user interface.
 
 ---
